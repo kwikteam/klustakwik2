@@ -1,0 +1,10 @@
+Data structures
+===============
+
+Data
+    For each spike:
+        Sparse 1D array of features
+        
+Sparse 1D array:
+    Pointer to unmask vector U of integers
+    Vector X of same length as U
