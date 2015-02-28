@@ -11,8 +11,9 @@ class SparseArray1D(object):
 
 
 class Spike(object):
-    def __init__(self, features, num_features):
+    def __init__(self, features, mask, num_features):
         self.features = features
+        self.mask = mask
         self.num_features = num_features
 
 
@@ -41,24 +42,32 @@ class DataContainer(object):
         else:
             self.masks[indhash] = inds
         spike = Spike(SparseArray1D(fetvals[inds], inds, num_features),
+                      SparseArray1D(fmaskvals[inds], inds, num_features),
                       num_features=num_features)
         self.spikes.append(spike)
         self.fetsum[masked] += fetvals[masked]
         self.fet2sum[masked] += fetvals[masked]**2
         self.nsum[masked] += 1
         
-    @property
-    def mean(self):
-        if hasattr(self, '_mean'):
-            return self._mean
+    def do_initial_precomputations(self):
+        self.compute_noise_mean_and_variance()
+        self.compute_correction_term_and_replace_data()
+        
+    def compute_noise_mean_and_variance(self):
         self.nsum[self.nsum==0] = 1
-        self._mean = self.fetsum/self.nsum
-        return self._mean
-    
-    @property
-    def var(self):
-        if hasattr(self, '_var'):
-            return self._var
-        mu = self.mean
-        self._var = self.fet2sum/self.nsum-(self.fetsum/self.nsum)**2
-        return self._var
+        mu = self.noise_mean = self.fetsum/self.nsum
+        self.noise_variance = self.fet2sum/self.nsum-mu**2
+
+    def compute_correction_term_and_replace_data(self):
+        self.correction_terms = []
+        for spike in self.spikes:
+            I = spike.features.inds
+            x = spike.features.vals
+            w = spike.mask.vals
+            nu = self.noise_mean[I]
+            sigma2 = self.noise_variance[I]
+            y = w*x+(1-w)*nu
+            z = w*x*x+(1-w)*(nu*nu+sigma2)
+            correction_term = SparseArray1D(z-y*y, I, self.num_features)
+            self.correction_terms.append(correction_term)
+            spike.features.vals = y
