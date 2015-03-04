@@ -8,6 +8,7 @@ __all__ = ['load_fet_fmask',
            'DataContainer',
            ]
 
+
 def load_fet_fmask(fname, shank):
     fet_fname = fname+'.fet.'+str(shank)
     fmask_fname = fname+'.fmask.'+str(shank)
