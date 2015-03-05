@@ -1,7 +1,10 @@
 from numpy import *
 from .hashing import hash_array
 
-__all__ = ['SparseArray1D', 'Spike', 'DataContainer']
+__all__ = ['SparseArray1D', 'Spike',
+           'BlockPlusDiagonalMatrix',
+           'DataContainer',
+           ]
 
 class SparseArray1D(object):
     def __init__(self, vals, inds, n):
@@ -15,6 +18,16 @@ class Spike(object):
         self.features = features
         self.mask = mask
         self.num_features = num_features
+
+
+class BlockPlusDiagonalMatrix(object):
+    def __init__(self, masked, unmasked):
+        self.masked = masked
+        self.unmasked = unmasked
+        self.num_masked = len(masked)
+        self.num_unmasked = len(unmasked)
+        self.block = zeros((self.num_unmasked, self.num_unmasked))
+        self.diagonal = zeros(self.num_masked)
 
 
 # Probably rename/remove/refactor this class
@@ -59,7 +72,6 @@ class DataContainer(object):
         self.noise_variance = self.fet2sum/self.nsum-mu**2
 
     def compute_correction_term_and_replace_data(self):
-        self.correction_terms = []
         for spike in self.spikes:
             I = spike.features.inds
             x = spike.features.vals
@@ -69,5 +81,5 @@ class DataContainer(object):
             y = w*x+(1-w)*nu
             z = w*x*x+(1-w)*(nu*nu+sigma2)
             correction_term = SparseArray1D(z-y*y, I, self.num_features)
-            self.correction_terms.append(correction_term)
+            spike.correction_term = correction_term
             spike.features.vals = y

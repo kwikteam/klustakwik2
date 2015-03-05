@@ -2,16 +2,25 @@ from numpy import *
 from itertools import izip
 
 from .mask_starts import mask_starts
+from .data import BlockPlusDiagonalMatrix
 
 import time
 
 __all__ = ['KK']
+
+def get_diagonal(x):
+    '''
+    Return a writeable view of the diagonal of x
+    '''
+    return x.reshape(-1)[::x.shape[0]+1]
+
 
 class KK(object):
     def __init__(self, data,
                  prior_point=1,
                  mua_point=1,
                  noise_point=1,
+                 points_for_cluster_mask=10,
                  ):
         
         self.data = data
@@ -19,11 +28,13 @@ class KK(object):
         self.prior_point = prior_point
         self.mua_point = mua_point
         self.noise_point = noise_point
+        self.points_for_cluster_mask = points_for_cluster_mask
     
     def cluster(self, num_starting_clusters):
         start = time.time()
         self.clusters = mask_starts(self.data, num_starting_clusters)
         print 'Mask starts:', time.time()-start
+        self.reindex_clusters()
         self.CEM()
     
     def CEM(self, recurse=True):
@@ -40,29 +51,38 @@ class KK(object):
         self.compute_score()
     
     def M_step(self):
-        # eliminate any clusters with 0 members
+        # eliminate any clusters with 0 members, compute the list of spikes
+        # in each cluster, compute the cluster masks and allocate space for
+        # covariance matrices
+        start = time.time()
         self.reindex_clusters()
+        self.compute_cluster_masks()
+        print 'compute_cluster_masks:', time.time()-start  
+
         num_cluster_members = self.num_cluster_members
-        num_clusters_alive = len(self.num_cluster_members)
+        num_clusters = len(self.num_cluster_members)
         num_features = self.num_features
         
         # Normalize by total number of points to give class weight
         denom = float(self.num_points+self.noise_point+self.mua_point+
-                                      self.prior_point*(num_clusters_alive-2))
+                                      self.prior_point*(num_clusters-2))
         weight = (num_cluster_members+self.prior_point)/denom
         # different calculation for clusters 0 and 1
         weight[0] = (num_cluster_members[0]+self.noise_point)/denom
         weight[1] = (num_cluster_members[1]+self.mua_point)/denom
         
         # Compute means for each cluster
-        cluster_mean = zeros((num_clusters_alive, num_features))
+        # Note that we do this densely at the moment, might want to switch
+        # that to a sparse structure later
+        start = time.time()
+        cluster_mean = zeros((num_clusters, num_features))
         F = zeros(num_features)
         for cluster, spike in izip(self.clusters, self.data.spikes):
             features = spike.features
             F[:] = self.data.noise_mean
             F[features.inds] = features.vals
             cluster_mean[cluster, :] += F
-        for cluster in xrange(num_clusters_alive):
+        for cluster in xrange(num_clusters):
             prior = 0
             if cluster==1:
                 prior = self.mua_point
@@ -70,7 +90,47 @@ class KK(object):
                 prior = self.prior_point
             cluster_mean[cluster, :] += prior*self.data.noise_mean
             cluster_mean[cluster, :] /= num_cluster_members[cluster]+prior
-        
+        print 'Compute cluster_mean:', time.time()-start  
+                
+        # Compute covariance matrices
+        start = time.time()
+        for cluster in xrange(2, num_clusters):
+            cov = self.covariance[cluster]
+            spikes = self.spikes_in_cluster[cluster]
+            block_diagonal = get_diagonal(cov.block)
+            for spike in spikes:
+                # compute main term of block
+                features = spike.features
+                f2m = zeros(num_features)
+                f2m[features.inds] = features.vals-self.data.noise_mean[features.inds]
+                cov.block += f2m[cov.unmasked, newaxis]*f2m[newaxis, cov.unmasked]
+                correction_term = zeros(num_features)
+                correction_term[features.inds] = spike.correction_term.vals
+                block_diagonal[:] += correction_term[cov.unmasked]
+                # TODO: optimisation where we do the simpler code below if the
+                # cluster mask is the same as the spike mask?
+                # if cluster mask is the same as spike mask
+                #f2m = features.vals-self.data.noise_mean[features.inds]
+                #cov.block += f2m[:, newaxis]*f2m[newaxis, :]
+                # add correction term to block diagonal
+                # if cluster mask is the same as spike mask
+                #block_diagonal[:] += spike.correction_term.vals
+            # Original code adds correction terms to masked diagonal part of
+            # matrix, but maybe this is inconsistent because we are assuming
+            # that the class as a whole is masked there so it should just get
+            # the prior point?
+            
+            # Add prior
+            block_diagonal[:] += self.prior_point*self.data.noise_variance[cov.unmasked]
+            cov.diagonal[:] += self.prior_point*self.data.noise_variance[cov.masked]
+            
+            # Normalise
+            factor = 1.0/(num_cluster_members[cluster]+self.prior_point-1)
+            cov.block *= factor
+            cov.diagonal *= factor
+                        
+        print 'Compute covariance matrices:', time.time()-start  
+            
     
     def E_step(self):
         pass
@@ -88,10 +148,6 @@ class KK(object):
         pass
 
     @property
-    def num_cluster_members(self):
-        return bincount(self.clusters)
-    
-    @property
     def num_points(self):
         return len(self.data.spikes)
     
@@ -101,10 +157,45 @@ class KK(object):
     
     def reindex_clusters(self):
         '''
-        Remove any clusters with 0 members (except for clusters 0 and 1)
+        Remove any clusters with 0 members (except for clusters 0 and 1),
+        and recompute the list of spikes in each cluster.
         '''
-        num_cluster_members = self.num_cluster_members
+        num_cluster_members = bincount(self.clusters)
         I = num_cluster_members>0
         I[0:2] = True # we keep clusters 0 and 1
         remapping = hstack((0, cumsum(I)))[:-1]
         self.clusters = remapping[self.clusters]
+        self.num_cluster_members = num_cluster_members = bincount(self.clusters)
+        self.spikes_in_cluster = [[] for _ in xrange(len(self.clusters))]
+        for cluster, spike in izip(self.clusters, self.data.spikes):
+            self.spikes_in_cluster[cluster].append(spike)
+        
+    def compute_cluster_masks(self):
+        '''
+        Computes the masked and unmasked indices for each cluster based on the
+        masks for each point in that cluster. Allocates space for covariance
+        matrices.
+        '''
+        num_clusters = len(self.num_cluster_members)
+        num_features = self.num_features
+        
+        # Compute the sum of 
+        cluster_mask_sum = zeros((num_clusters, num_features))
+        cluster_mask_sum[:2, :] = -1 # ensure that clusters 0 and 1 are masked
+        for cluster, spike in izip(self.clusters, self.data.spikes):
+            if cluster<=1:
+                continue
+            cluster_mask_sum[cluster, spike.mask.inds] += spike.mask.vals
+        
+        # Compute the masked and unmasked sets
+        self.cluster_masked_features = []
+        self.cluster_unmasked_features = []
+        self.covariance = []
+        for cluster in xrange(num_clusters):
+            curmask = cluster_mask_sum[cluster, :]
+            unmasked, = (curmask>=self.points_for_cluster_mask).nonzero()
+            masked, = (curmask<self.points_for_cluster_mask).nonzero()
+            self.cluster_masked_features.append(masked)
+            self.cluster_unmasked_features.append(unmasked)
+            self.covariance.append(BlockPlusDiagonalMatrix(masked, unmasked))
+            
