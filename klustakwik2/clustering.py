@@ -141,7 +141,8 @@ class KK(object):
         
         weight = self.weight
 
-        log_p = zeros((num_clusters, num_spikes))
+        self.log_p = log_p = zeros((num_clusters, num_spikes))
+        num_skipped = 0
         
         # start with cluster 0 - uniform distribution over space
         # because we have normalized all dims to 0...1, density will be 1.
@@ -171,93 +172,24 @@ class KK(object):
                 basis_vector[i] = 0.0
             
             for p, spike in enumerate(self.data.spikes):
-                # TODO:
-                # to save time -- only recalculate if the last one was close
-                # if (
-                #     !FullStep
-                #     && (Class[p] == OldClass[p])
-                #     && (LogP[p*MaxPossibleClusters+c] - LogP[p*MaxPossibleClusters+Class[p]] > DistThresh)
-                #     )
-                # {
-                #     nSkipped++;
-                #     continue;
-                # }
-                
-                # Compute Mahalanobis distance
-                mahal = 0.0
-                
+                if not full_step and clusters[p]!=old_clusters[p] and log_p[cluster, p]-log_p[clusters[p], p]>dist_thresh:
+                    num_skipped += 1
+                    continue
                 # calculate data minus class mean
                 # TODO: improve the efficiency of this (it's not ideal)
                 features = spike.features
                 f2cm = zeros(num_features)
                 f2cm = self.data.noise_mean-self.cluster_mean[cluster, :]
                 f2cm[features.inds] = features.vals-self.cluster_mean[cluster, features.inds]
+                
+                root = bpd_trisolve(chol, chol_lower, f2cm)
+                
+                # Compute Mahalanobis distance
+                mahal = sum(root**2)
+                mahal += sum(inv_cov_diag[features.inds]*spike.correction_term.vals)
 
-                # TODO: remaining code of E-step
-#             // calculate Root vector - by Chol*Root = Vec2Mean
-#             if (UseDistributional)
-#                 BPDTriSolve(*CholBPD, safeVec2Mean, safeRoot);
-#             else
-#                 TriSolve(safeChol, safeVec2Mean, safeRoot, nDims);
-# 
-#             // add half of Root vector squared to log p
-#             for(i=0; i<nDims; i++)
-#                 Mahal += Root[i]*Root[i];
-# 
-#             // if distributional E step, add correction term
-#             if (UseDistributional)
-#             {
-#                 const scalar * __restrict icd = &(InvCovDiag[0]);
-#                 scalar subMahal = 0.0;
-# #ifdef COMPUTED_CORRECTION_TERM
-# #ifdef STORE_FLOAT_MASK_AS_CHAR
-#                 const unsigned char * __restrict ptr_char_w = &(CharFloatMasks[p*nDims]);
-# #else
-#                 const scalar * __restrict ptr_w = &(FloatMasks[p*nDims]);
-# #endif
-#                 const scalar * __restrict ptr_nu = &(NoiseMean[0]);
-#                 const scalar * __restrict ptr_sigma2 = &(NoiseVariance[0]);
-#                 restricted_data_pointer ptr_y = &(Data[p*nDims]);
-#                 for (i = 0; i < nDims; i++)
-#                 {
-# #ifdef STORE_FLOAT_MASK_AS_CHAR
-#                     const scalar w = ptr_char_w[i]/(scalar)255.0;
-# #else
-#                     const scalar w = ptr_w[i];
-# #endif
-#                     const scalar nu = ptr_nu[i];
-#                     const scalar sigma2 = ptr_sigma2[i];
-#                     const scalar y = get_data_from_pointer(ptr_y, i);
-#                     scalar eta;
-#                     if(w==(scalar)0.0)
-#                     {
-#                         const scalar z = nu*nu+sigma2;
-#                         eta = z-y*y;
-#                     } else
-#                     {
-#                         const scalar x = (y-(1-w)*nu)/w;
-#                         const scalar z = w*x*x+(1-w)*(nu*nu+sigma2);
-#                         eta = z-y*y;
-#                     }
-#                     subMahal += eta * icd[i];
-#                 }
-# #else
-#                 const scalar * __restrict ctp = &(CorrectionTerm[p*nDims]);
-#                 for (i = 0; i < nDims; i++)
-#                     subMahal += ctp[i] * icd[i];
-# #endif
-#                 Mahal += subMahal*correction_factor;
-#             }
-#             // Score is given by Mahal/2 + log RootDet - log weight
-#             LogP[p*MaxPossibleClusters + c] = Mahal/2
-#                                        + LogRootDet
-#                                     - log(Weight[c])
-#                                     + (0.5*log(2 * M_PI))*nDims;
-# 
-#         } // for(p=0; p<nPoints; p++)
-#     } // for(cc=1; cc<nClustersAlive; cc++)
-#     if (CholBPD)
-#         delete CholBPD;
+                # Score is given by Mahal/2 + log RootDet - log weight
+                log_p[cluster, p] = mahal/2+log_root_det-log(weight[cluster])+0.5*log(2*pi)*num_features
     
     def C_step(self):
         pass
