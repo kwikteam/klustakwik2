@@ -28,6 +28,9 @@ class BlockPlusDiagonalMatrix(object):
         self.num_unmasked = len(unmasked)
         self.block = zeros((self.num_unmasked, self.num_unmasked))
         self.diagonal = zeros(self.num_masked)
+    
+    def new_with_same_masks(self):
+        return BlockPlusDiagonalMatrix(self.masked, self.unmasked)
 
 
 # Probably rename/remove/refactor this class
