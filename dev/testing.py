@@ -21,4 +21,5 @@ data.do_initial_precomputations()
 print 'Initial precomputation time:', time.time()-start
 
 kk = KK(data)
+
 kk.cluster(num_starting_clusters=100)

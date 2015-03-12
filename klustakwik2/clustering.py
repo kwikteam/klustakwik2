@@ -102,13 +102,13 @@ class KK(object):
             block_diagonal = get_diagonal(cov.block)
             for spike in spikes:
                 # compute main term of block
-                features = spike.features
-                f2m = zeros(num_features)
-                f2m[features.inds] = features.vals-self.data.noise_mean[features.inds]
-                cov.block += f2m[cov.unmasked, newaxis]*f2m[newaxis, cov.unmasked]
-                correction_term = zeros(num_features)
-                correction_term[features.inds] = spike.correction_term.vals
-                block_diagonal[:] += correction_term[cov.unmasked]
+                features = spike.features # profiling: 2% of M-step
+                f2m = zeros(num_features) # profiling: 4% of M-step
+                f2m[features.inds] = features.vals-self.data.noise_mean[features.inds] # profiling: 9% of M-step
+                cov.block += f2m[cov.unmasked, newaxis]*f2m[newaxis, cov.unmasked] # profiling: 20% of M-step
+                correction_term = zeros(num_features) # profiling: 4% of M-step
+                correction_term[features.inds] = spike.correction_term.vals # profiling: 4% of M-step
+                block_diagonal[:] += correction_term[cov.unmasked] # profiling: 10% of M-step
                 # TODO: optimisation where we do the simpler code below if the
                 # cluster mask is the same as the spike mask?
                 # if cluster mask is the same as spike mask
@@ -133,7 +133,6 @@ class KK(object):
                         
         print 'Compute covariance matrices:', time.time()-start
             
-    
     def E_step(self):
         num_spikes = self.num_points
         num_clusters = len(self.num_cluster_members)
@@ -172,24 +171,25 @@ class KK(object):
                 basis_vector[i] = 0.0
             
             for p, spike in enumerate(self.data.spikes):
-                if not full_step and clusters[p]!=old_clusters[p] and log_p[cluster, p]-log_p[clusters[p], p]>dist_thresh:
-                    num_skipped += 1
-                    continue
+                # TODO: put this back in
+#                 if not full_step and clusters[p]!=old_clusters[p] and log_p[cluster, p]-log_p[clusters[p], p]>dist_thresh:
+#                     num_skipped += 1
+#                     continue
                 # calculate data minus class mean
                 # TODO: improve the efficiency of this (it's not ideal)
-                features = spike.features
-                f2cm = zeros(num_features)
-                f2cm = self.data.noise_mean-self.cluster_mean[cluster, :]
-                f2cm[features.inds] = features.vals-self.cluster_mean[cluster, features.inds]
+                features = spike.features # profiling: 1% of E-step
+                f2cm = zeros(num_features) # profiling: 2% of E-step
+                f2cm = self.data.noise_mean-self.cluster_mean[cluster, :] # profiling: 4% of E-step
+                f2cm[features.inds] = features.vals-self.cluster_mean[cluster, features.inds]  # profiling: 5% of E-step
                 
-                root = bpd_trisolve(chol, chol_lower, f2cm)
+                root = bpd_trisolve(chol, chol_lower, f2cm) # profiling: 64% of E-step
                 
                 # Compute Mahalanobis distance
-                mahal = sum(root**2)
-                mahal += sum(inv_cov_diag[features.inds]*spike.correction_term.vals)
+                mahal = sum(root**2) # profiling: 8% of E-step
+                mahal += sum(inv_cov_diag[features.inds]*spike.correction_term.vals) # profiling: 9% of E-step
 
                 # Score is given by Mahal/2 + log RootDet - log weight
-                log_p[cluster, p] = mahal/2+log_root_det-log(weight[cluster])+0.5*log(2*pi)*num_features
+                log_p[cluster, p] = mahal/2+log_root_det-log(weight[cluster])+0.5*log(2*pi)*num_features # profiling: 6% of E-step
     
     def C_step(self):
         pass
