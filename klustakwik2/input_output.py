@@ -1,16 +1,12 @@
 from numpy import *
 from itertools import izip
 
-from .hashing import hash_array
-from .data import SparseArray1D, Spike, DataContainer
+from .data import RawSparseData
+
+__all__ = ['loat_fet_fmask_to_raw']
 
 
-__all__ = ['load_fet_fmask',
-           'DataContainer',
-           ]
-
-
-def load_fet_fmask(fname, shank):
+def loat_fet_fmask_to_raw(fname, shank):
     fet_fname = fname+'.fet.'+str(shank)
     fmask_fname = fname+'.fmask.'+str(shank)
     # read files
@@ -19,25 +15,17 @@ def load_fet_fmask(fname, shank):
     # read first line of fmask file
     num_features = int(fmask_file.readline())
     # Stage 1: read min/max of fet values for normalisation
+    # and count total number of unmasked features
     fet_file.readline() # skip first line (num channels)
-    fmask_file.readline()
     # we normalise channel-by-channel
     vmin = ones(num_features)*inf
     vmax = ones(num_features)*-inf
     total_unmasked_features = 0
-    total_mask_length = 0
-    num_masks = 0
     num_spikes = 0
-    mask_hashes = set()
     for fetline, fmaskline in izip(fet_file, fmask_file):
         vals = fromstring(fetline, dtype=float, sep=' ')
         fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')
         inds, = (fmaskvals>0).nonzero()
-        indhash = hash_array(inds)
-        if indhash not in mask_hashes:
-            mask_hashes.add(indhash)
-            num_masks += 1
-            total_mask_length += len(inds)
         total_unmasked_features += len(inds)
         vmin = minimum(vals, vmin)
         vmax = maximum(vals, vmax)
@@ -49,13 +37,32 @@ def load_fet_fmask(fname, shank):
     fmask_file.close()
     fmask_file = open(fmask_fname, 'r')
     fmask_file.readline()
-    data = DataContainer(num_features, num_spikes, total_unmasked_features,
-                         num_masks, total_mask_length)
     vdiff = vmax-vmin
     vdiff[vdiff==0] = 1
-    for fetline, fmaskline in izip(fet_file, fmask_file):
-        # this normalisation could be refactored
+    fetsum = zeros(num_features)
+    fet2sum = zeros(num_features)
+    nsum = zeros(num_features)
+    all_features = zeros(total_unmasked_features)
+    all_fmasks = zeros(total_unmasked_features)
+    all_unmasked = zeros(total_unmasked_features, dtype=int)
+    offsets = zeros(num_spikes+1, dtype=int)
+    curoff = 0
+    for i, (fetline, fmaskline) in enumerate(izip(fet_file, fmask_file)):
         fetvals = (fromstring(fetline, dtype=float, sep=' ')-vmin)/vdiff
         fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')
-        data.add_from_dense(fetvals, fmaskvals)
-    return data
+        inds, = (fmaskvals>0).nonzero()
+        all_features[curoff:curoff+len(inds)] = fetvals[inds]
+        all_fmasks[curoff:curoff+len(inds)] = fmaskvals[inds]
+        all_unmasked[curoff:curoff+len(inds)] = inds
+        offsets[i] = curoff
+        curoff += len(inds)
+        fetsum[inds] += fetvals[inds]
+        fet2sum[inds] += fetvals[inds]**2
+        nsum[inds] += 1        
+    offsets[-1] = curoff
+    
+    nsum[nsum==0] = 1
+    noise_mean = fetsum/nsum
+    noise_variance = fet2sum/nsum-noise_mean**2
+    
+    return RawSparseData(noise_mean, noise_variance, all_features, all_fmasks, all_unmasked, offsets)

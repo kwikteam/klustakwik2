@@ -1,144 +1,105 @@
 from numpy import *
-from .hashing import hash_array
+import time
 
-__all__ = ['SparseArray1D', 'Spike',
-           'BlockPlusDiagonalMatrix',
-           'DataContainer',
+from .precomputations import sort_masks, compute_correction_terms_and_replace_data
+
+__all__ = ['RawSparseData', 'SparseData',
            ]
 
-class SparseArray1D(object):
-    def __init__(self, vals, inds, n):
-        self.vals = vals
-        self.inds = inds
-        self.n = n
 
-
-class Spike(object):
-    def __init__(self, features, mask, num_features):
-        self.features = features
-        self.mask = mask
-        self.num_features = num_features
-
-
-class BlockPlusDiagonalMatrix(object):
-    def __init__(self, masked, unmasked):
-        self.masked = masked
-        self.unmasked = unmasked
-        self.num_masked = len(masked)
-        self.num_unmasked = len(unmasked)
-        self.block = zeros((self.num_unmasked, self.num_unmasked))
-        self.diagonal = zeros(self.num_masked)
+class RawSparseData(object):
+    '''
+    Contains raw, sparse data used for clustering
     
-    def new_with_same_masks(self):
-        return BlockPlusDiagonalMatrix(self.masked, self.unmasked)
+    This object is only used as an intermediate step, not directly by the
+    other algorithms. It should be converted into a SparseData object.
+    
+    Note that for .fet/.fmask data there already has to be some non-trivial
+    processing to get this far (to sparsify the data and extract the
+    noise mean and variance). However, in the future this step may have been
+    computed by SpikeDetekt which will output sparse data.
+    
+    Also note that the indices can be a smaller array than the features and
+    fmasks because there may be a much smaller unique set.
+    TODO: method to carry this out
+    
+    Consists of the following:
 
-
-# Probably rename/remove/refactor this class
-class DataContainer(object):
-    def __init__(self, num_features, num_spikes, total_unmasked_features,
-                 num_masks, total_mask_length,
-                 masks=None, spikes=None):
-        if masks is None:
-            masks = {}
-        if spikes is None:
-            spikes = []
+    - noise_mean, noise_variance: arrays of length the number of features
+    - features: array of feature values
+    - masks: array of mask values
+    - unmasked: array of unmasked indices
+    - offset: array of offset indices (of length the number of spikes + 1)
+    
+    This is a sparse array such that the feature vector for spike i has
+    non-default values at indices unmasked[offset[i]:offset[i+1]]
+    with values features[offset[i]:offset[i+1]]. masks has the same structure. 
+    '''
+    def __init__(self,
+                 noise_mean, noise_variance,
+                 features, masks, unmasked,
+                 offsets,
+                 ):
+        # Raw data
+        self.noise_mean = noise_mean
+        self.noise_variance = noise_variance
+        self.features = features
         self.masks = masks
-        self.spikes = spikes
-        self.num_features = num_features
-        self.num_spikes = num_spikes
-        self.total_unmasked_features = total_unmasked_features
-        self.num_masks = num_masks
-        self.total_mask_length = total_mask_length
-        self.flat_data = FlatDataContainer(num_features, num_spikes,
-                                           total_unmasked_features,
-                                           num_masks, total_mask_length)
-        self.fetsum = zeros(num_features)
-        self.fet2sum = zeros(num_features)
-        self.nsum = zeros(num_features)
+        self.unmasked = unmasked
+        self.offsets = offsets
         
-    def add_from_dense(self, fetvals, fmaskvals):
-        num_features = len(fetvals)
-        inds, = (fmaskvals>0).nonzero()
-        masked, = (fmaskvals==0).nonzero()
-        self.fetsum[masked] += fetvals[masked]
-        self.fet2sum[masked] += fetvals[masked]**2
-        self.nsum[masked] += 1
-        spike = self.flat_data.add_from_sparse(fetvals[inds],
-                                               fmaskvals[inds],
-                                               inds)
-        self.spikes.append(spike)
-        indhash = hash_array(inds)
-        self.masks[indhash] = spike.features.inds
+    def to_sparse_data(self):
+        values_start = self.offsets[:-1]
+        values_end = self.offsets[1:]
+        start_time = time.time()
+        features, correction_terms = compute_correction_terms_and_replace_data(self)
+        print 'compute correction terms:', time.time()-start_time
+        start_time = time.time()
+        order, unmasked, unmasked_start, unmasked_end = sort_masks(self)
+        print 'sort masks:', time.time()-start_time
+        return SparseData(self.noise_mean, self.noise_variance,
+                          features, self.masks,
+                          values_start[order], values_end[order],
+                          unmasked,
+                          unmasked_start, unmasked_end,
+                          correction_terms,
+                          )
+
+
+class SparseData(object):
+    '''
+    Notes:
+    - Assumes that the spikes are in sorted mask order, can use unmasked_start
+      as a proxy for the identity of the mask
+    '''
+    def __init__(self,
+                 noise_mean, noise_variance,
+                 features, masks,
+                 values_start, values_end,
+                 unmasked,
+                 unmasked_start, unmasked_end,
+                 correction_terms,
+                 ):
+        # Data arrays
+        self.noise_mean = noise_mean
+        self.noise_variance = noise_variance
+        self.features = features
+        self.masks = masks
+        self.values_start = values_start
+        self.values_end = values_end
+        self.unmasked = unmasked
+        self.unmasked_start = unmasked_start
+        self.unmasked_end = unmasked_end
+        self.correction_terms = correction_terms
+        # Derived data
+        self.num_spikes = len(self.values_start)
+        self.num_features = len(self.noise_mean)
         
-    def do_initial_precomputations(self):
-        self.compute_noise_mean_and_variance()
-        self.compute_correction_term_and_replace_data()
-        
-    def compute_noise_mean_and_variance(self):
-        self.nsum[self.nsum==0] = 1
-        mu = self.noise_mean = self.fetsum/self.nsum
-        self.noise_variance = self.fet2sum/self.nsum-mu**2
-
-    def compute_correction_term_and_replace_data(self):
-        for spike in self.spikes:
-            I = spike.features.inds
-            x = spike.features.vals
-            w = spike.mask.vals
-            nu = self.noise_mean[I]
-            sigma2 = self.noise_variance[I]
-            y = w*x+(1-w)*nu
-            z = w*x*x+(1-w)*(nu*nu+sigma2)
-            spike.correction_term.vals[:] = z-y*y
-            spike.features.vals[:] = y
-
-
-class FlatDataContainer(object):
-    def __init__(self, num_features, num_spikes, total_unmasked_features,
-                 num_masks, total_mask_length):
-        self.num_features = num_features
-        self.num_spikes = num_spikes
-        self.total_unmasked_features = total_unmasked_features
-        self.num_masks = num_masks
-        self.total_mask_length = total_mask_length
-        # allocate sufficient memory
-        self.all_features = zeros(total_unmasked_features)
-        self.all_fmasks = zeros(total_unmasked_features)
-        self.all_correction_terms = zeros(total_unmasked_features)
-        self.all_maskinds = zeros(total_mask_length, dtype=int)
-        self.feature_start_indices = zeros(num_spikes, dtype=int)
-        self.feature_end_indices = zeros(num_spikes, dtype=int)
-        self.maskind_start_indices = zeros(num_spikes, dtype=int)
-        self.maskind_end_indices = zeros(num_spikes, dtype=int)
-        # tracking variables
-        self.current_spike = 0
-        self.current_feature_offset = 0
-        self.current_maskind_offset = 0
-        self.masks = dict()
-
-    def add_from_sparse(self, fetvals, fmaskvals, inds):
-        num_features = self.num_features
-        indhash = hash_array(inds)
-        if indhash in self.masks:
-            mask_start_idx, mask_end_idx = self.masks[indhash]
-        else:
-            mask_start_idx = self.current_maskind_offset
-            mask_end_idx = mask_start_idx+len(inds)
-            self.current_maskind_offset = mask_end_idx
-            self.all_maskinds[mask_start_idx:mask_end_idx] = inds
-            self.masks[indhash] = (mask_start_idx, mask_end_idx)
-        fet_start_idx = self.current_feature_offset
-        fet_end_idx = fet_start_idx+len(inds)
-        self.all_features[fet_start_idx:fet_end_idx] = fetvals
-        self.all_fmasks[fet_start_idx:fet_end_idx] = fmaskvals
-        spike = Spike(SparseArray1D(self.all_features[fet_start_idx:fet_end_idx],
-                                    self.all_maskinds[mask_start_idx:mask_end_idx],
-                                    num_features),
-                      SparseArray1D(self.all_fmasks[fet_start_idx:fet_end_idx],
-                                    self.all_maskinds[mask_start_idx:mask_end_idx],
-                                    num_features),
-                      num_features=num_features)
-        spike.correction_term = SparseArray1D(
-                        self.all_correction_terms[fet_start_idx:fet_end_idx],
-                        self.all_maskinds[mask_start_idx:mask_end_idx],
-                        num_features)
-        return spike
+    def subset(self, spikes):
+        return SparseData(self.noise_mean, self.noise_variance,
+                          self.features, self.masks,
+                          self.values_start[spikes], self.values_end[spikes],
+                          self.unmasked,
+                          self.unmasked_start[spikes], self.unmasked_end[spikes],
+                          self.correction_terms,
+                          )

@@ -3,8 +3,7 @@ from numpy.linalg import LinAlgError
 from itertools import izip
 
 from .mask_starts import mask_starts
-from .data import BlockPlusDiagonalMatrix
-from .linear_algebra import bpd_cholesky, bpd_trisolve
+from .linear_algebra import BlockPlusDiagonalMatrix
 
 import time
 

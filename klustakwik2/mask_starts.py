@@ -1,5 +1,4 @@
 from numpy import *
-from .hashing import hash_array
 
 __all__ = ['mask_starts']
 
