@@ -35,7 +35,9 @@ class KK(object):
         start = time.time()
         self.clusters = mask_starts(self.data, num_starting_clusters)
         print 'Mask starts:', time.time()-start
+        start = time.time()
         self.reindex_clusters()
+        print 'Reindex clusters:', time.time()-start
         self.CEM()
     
     def CEM(self, recurse=True):
@@ -213,7 +215,14 @@ class KK(object):
     def reindex_clusters(self):
         '''
         Remove any clusters with 0 members (except for clusters 0 and 1),
-        and recompute the list of spikes in each cluster.
+        and recompute the list of spikes in each cluster. After this function is
+        run, you can use the attributes:
+        
+        - num_cluster_members (of length the number of clusters)
+        - spikes_in_cluster, spikes_in_cluster_offset
+
+        spikes_in_cluster[spikes_in_cluster_offset[c]:spikes_in_cluster_offset[c+1]] will be in the indices
+        of all the spikes in cluster c. 
         '''
         num_cluster_members = bincount(self.clusters)
         I = num_cluster_members>0
@@ -221,9 +230,12 @@ class KK(object):
         remapping = hstack((0, cumsum(I)))[:-1]
         self.clusters = remapping[self.clusters]
         self.num_cluster_members = num_cluster_members = bincount(self.clusters)
-        self.spikes_in_cluster = [[] for _ in xrange(len(self.clusters))]
-        for cluster, spike in izip(self.clusters, self.data.spikes):
-            self.spikes_in_cluster[cluster].append(spike)
+        I = argsort(self.clusters)
+        y = self.clusters[I]
+        n = amax(y)+2
+        J = searchsorted(y, arange(n))
+        self.spikes_in_cluster = I
+        self.spikes_in_cluster_offset = J
         
     def compute_cluster_masks(self):
         '''
