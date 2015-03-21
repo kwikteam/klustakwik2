@@ -4,6 +4,7 @@ from itertools import izip
 
 from .mask_starts import mask_starts
 from .linear_algebra import BlockPlusDiagonalMatrix
+from .cylib.compute_cluster_masks import accumulate_cluster_mask_sum
 
 import time
 
@@ -249,10 +250,8 @@ class KK(object):
         # Compute the sum of 
         cluster_mask_sum = zeros((num_clusters, num_features))
         cluster_mask_sum[:2, :] = -1 # ensure that clusters 0 and 1 are masked
-        for cluster, spike in izip(self.clusters, self.data.spikes):
-            if cluster<=1:
-                continue
-            cluster_mask_sum[cluster, spike.mask.inds] += spike.mask.vals
+        # Use efficient version
+        accumulate_cluster_mask_sum(self, cluster_mask_sum)
         
         # Compute the masked and unmasked sets
         self.cluster_masked_features = []
