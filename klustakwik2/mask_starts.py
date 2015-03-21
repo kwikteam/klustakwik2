@@ -5,40 +5,44 @@ __all__ = ['mask_starts']
 def mask_difference(A, B, n):
     X = zeros(n, dtype=int)
     Y = zeros(n, dtype=int)
+    X[A] = 1
+    Y[B] = 1
     return sum(abs(X-Y))
 
 
 def mask_starts(data, num_clusters):
-    if len(data.masks)<num_clusters:
+    if data.num_masks<num_clusters:
         print ('Not enough masks (%d) for that many starting '
-               'clusters (%d)') % (len(data.masks), num_clusters)
-        num_clusters = len(data.masks)
-    clusters = zeros(len(data.spikes), dtype=int)
+               'clusters (%d)') % (data.num_masks, num_clusters)
+        num_clusters = data.num_masks
+    clusters = zeros(data.num_spikes, dtype=int)
     found = dict()
+    end = dict()
     cur_cluster = 0
     num_features = data.num_features
-    for i, spike in enumerate(data.spikes):
-        unmasked = spike.features.inds
-        unmasked_hash = hash_array(unmasked)
-        if unmasked_hash in found:
+    for p in xrange(data.num_spikes):
+        unmasked = data.unmasked[data.unmasked_start[p]:data.unmasked_end[p]]
+        mask_id = data.unmasked_start[p]
+        if mask_id in found:
             # we've already used this mask
-            clusters[i] = found[unmasked_hash]
+            clusters[p] = found[mask_id]
         else:
             if cur_cluster<num_clusters:
                 # use a new mask
-                found[unmasked_hash] = cur_cluster
-                clusters[i] = cur_cluster
+                found[mask_id] = cur_cluster
+                end[mask_id] = data.unmasked_end[p]
+                clusters[p] = cur_cluster
                 cur_cluster += 1
             else:
                 # we have to find the closest mask
                 best_distance = num_features+1
-                best_hash = None
-                for candidate_hash in found.iterkeys():
-                    candidate_mask = data.masks[candidate_hash].features.inds
+                best_id = None
+                for candidate_id in found.iterkeys():
+                    candidate_mask = data.unmasked[mask_id:end[mask_id]]
                     d = mask_difference(candidate_mask, unmasked)
                     if d<best_distance:
                         best_distance = d
-                        best_hash = candidate_hash
-                clusters[i] = found[best_hash]
-                found[unmasked_hash] = found[best_hash]
+                        best_id = candidate_id
+                clusters[p] = found[best_id]
+                found[mask_id] = found[best_id]
     return clusters

@@ -20,3 +20,7 @@ else:
     pickle.dump(data, open(fname+'.pickle', 'wb'), -1)
     
 print 'Number of spikes:', data.num_spikes
+print 'Number of unique masks:', data.num_masks
+
+kk = KK(data)
+kk.cluster(100)
