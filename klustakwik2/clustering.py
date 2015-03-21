@@ -4,7 +4,9 @@ from itertools import izip
 
 from .mask_starts import mask_starts
 from .linear_algebra import BlockPlusDiagonalMatrix
+
 from .cylib.compute_cluster_masks import accumulate_cluster_mask_sum
+from .cylib.m_step import compute_cluster_means
 
 import time
 
@@ -68,7 +70,7 @@ class KK(object):
         num_features = self.num_features
         
         # Normalize by total number of points to give class weight
-        denom = float(self.num_points+self.noise_point+self.mua_point+
+        denom = float(self.num_spikes+self.noise_point+self.mua_point+
                                       self.prior_point*(num_clusters-2))
         self.weight = weight = (num_cluster_members+self.prior_point)/denom
         # different calculation for clusters 0 and 1
@@ -79,21 +81,7 @@ class KK(object):
         # Note that we do this densely at the moment, might want to switch
         # that to a sparse structure later
         start = time.time()
-        self.cluster_mean = cluster_mean = zeros((num_clusters, num_features))
-        F = zeros(num_features)
-        for cluster, spike in izip(self.clusters, self.data.spikes):
-            features = spike.features
-            F[:] = self.data.noise_mean
-            F[features.inds] = features.vals
-            cluster_mean[cluster, :] += F
-        for cluster in xrange(num_clusters):
-            prior = 0
-            if cluster==1:
-                prior = self.mua_point
-            elif cluster>=2:
-                prior = self.prior_point
-            cluster_mean[cluster, :] += prior*self.data.noise_mean
-            cluster_mean[cluster, :] /= num_cluster_members[cluster]+prior
+        self.cluster_mean = compute_cluster_means(self)
         print 'Compute cluster_mean:', time.time()-start  
                 
         # Compute covariance matrices
@@ -206,8 +194,8 @@ class KK(object):
         pass
 
     @property
-    def num_points(self):
-        return len(self.data.spikes)
+    def num_spikes(self):
+        return self.data.num_spikes
     
     @property
     def num_features(self):

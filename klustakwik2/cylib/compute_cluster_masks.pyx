@@ -12,17 +12,17 @@ def accumulate_cluster_mask_sum(kk, cluster_mask_sum):
     unmasked = data.unmasked
     ustart = data.unmasked_start
     uend = data.unmasked_end
-    features = data.features
+    masks = data.masks
     vstart = data.values_start
     vend = data.values_end
     num_spikes = data.num_spikes
-    doaccum(clusters, unmasked, ustart, uend, features, vstart, vend, cluster_mask_sum)
+    doaccum(clusters, unmasked, ustart, uend, masks, vstart, vend, cluster_mask_sum)
 
 cdef doaccum(numpy.ndarray[int, ndim=1] clusters,
              numpy.ndarray[int, ndim=1] unmasked,
              numpy.ndarray[int, ndim=1] ustart,
              numpy.ndarray[int, ndim=1] uend,
-             numpy.ndarray[double, ndim=1] features,
+             numpy.ndarray[double, ndim=1] masks,
              numpy.ndarray[int, ndim=1] vstart,
              numpy.ndarray[int, ndim=1] vend,
              numpy.ndarray[double, ndim=2] cluster_mask_sum,
@@ -36,4 +36,4 @@ cdef doaccum(numpy.ndarray[int, ndim=1] clusters,
             continue
         num_unmasked = uend[p]-ustart[p]
         for i in range(num_unmasked):
-            cluster_mask_sum[c, unmasked[ustart[p]+i]] += features[vstart[p]+i]
+            cluster_mask_sum[c, unmasked[ustart[p]+i]] += masks[vstart[p]+i]
