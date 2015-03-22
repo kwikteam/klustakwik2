@@ -119,7 +119,7 @@ class KK(object):
         
         clusters_to_kill = []
         
-        for cluster in xrange(2, num_clusters):
+        for cluster in xrange(1, num_clusters):
             cov = self.covariance[cluster]
             try:
                 chol = cov.cholesky()
