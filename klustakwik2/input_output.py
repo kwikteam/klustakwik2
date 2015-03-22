@@ -56,9 +56,9 @@ def loat_fet_fmask_to_raw(fname, shank):
         all_unmasked[curoff:curoff+len(inds)] = inds
         offsets[i] = curoff
         curoff += len(inds)
-        fetsum[inds] += fetvals[inds]
-        fet2sum[inds] += fetvals[inds]**2
-        nsum[inds] += 1        
+        fetsum += fetvals
+        fet2sum += fetvals**2
+        nsum += 1        
     offsets[-1] = curoff
     
     nsum[nsum==0] = 1

@@ -6,10 +6,10 @@ from .mask_starts import mask_starts
 from .linear_algebra import BlockPlusDiagonalMatrix
 
 from .cylib.compute_cluster_masks import accumulate_cluster_mask_sum
-from .cylib.m_step import compute_cluster_means
+from .cylib.m_step import compute_cluster_means, compute_covariance_matrix
+from .cylib.e_step import compute_log_p
 
 import time
-from klustakwik2.cylib.m_step import compute_covariance_matrix, compute_covariance_matrix
 
 __all__ = ['KK']
 
@@ -104,7 +104,7 @@ class KK(object):
         print 'Compute covariance matrices:', time.time()-start
             
     def E_step(self):
-        num_spikes = self.num_points
+        num_spikes = self.num_spikes
         num_clusters = len(self.num_cluster_members)
         num_features = self.num_features
         
@@ -115,15 +115,14 @@ class KK(object):
         
         # start with cluster 0 - uniform distribution over space
         # because we have normalized all dims to 0...1, density will be 1.
-        for p, spike in enumerate(self.data.spikes):
-            log_p[0, p] = -log(weight[0])
+        log_p[0, :] = -log(weight[0])
         
         clusters_to_kill = []
         
-        for cluster in xrange(1, num_clusters):
+        for cluster in xrange(2, num_clusters):
             cov = self.covariance[cluster]
             try:
-                chol, chol_lower = bpd_cholesky(cov)
+                chol = cov.cholesky()
             except LinAlgError:
                 clusters_to_kill.append(cluster)
                 continue
@@ -136,31 +135,12 @@ class KK(object):
             basis_vector = zeros(num_features)
             for i in xrange(num_features):
                 basis_vector[i] = 1.0
-                root = bpd_trisolve(chol, chol_lower, basis_vector)
+                root = chol.trisolve(basis_vector)
                 inv_cov_diag[i] = sum(root**2)
                 basis_vector[i] = 0.0
-            
-            for p, spike in enumerate(self.data.spikes):
-                # TODO: put this back in
-#                 if not full_step and clusters[p]!=old_clusters[p] and log_p[cluster, p]-log_p[clusters[p], p]>dist_thresh:
-#                     num_skipped += 1
-#                     continue
-                # calculate data minus class mean
-                # TODO: improve the efficiency of this (it's not ideal)
-                features = spike.features # profiling: 1% of E-step
-                f2cm = zeros(num_features) # profiling: 2% of E-step
-                f2cm = self.data.noise_mean-self.cluster_mean[cluster, :] # profiling: 4% of E-step
-                f2cm[features.inds] = features.vals-self.cluster_mean[cluster, features.inds]  # profiling: 5% of E-step
                 
-                root = bpd_trisolve(chol, chol_lower, f2cm) # profiling: 64% of E-step
-                
-                # Compute Mahalanobis distance
-                mahal = sum(root**2) # profiling: 8% of E-step
-                mahal += sum(inv_cov_diag[features.inds]*spike.correction_term.vals) # profiling: 9% of E-step
-
-                # Score is given by Mahal/2 + log RootDet - log weight
-                log_p[cluster, p] = mahal/2+log_root_det-log(weight[cluster])+0.5*log(2*pi)*num_features # profiling: 6% of E-step
-    
+            compute_log_p(self, cluster, inv_cov_diag, log_root_det, chol)
+        
     def C_step(self):
         pass
     
