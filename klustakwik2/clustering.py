@@ -9,6 +9,7 @@ from .cylib.compute_cluster_masks import accumulate_cluster_mask_sum
 from .cylib.m_step import compute_cluster_means
 
 import time
+from klustakwik2.cylib.m_step import compute_covariance_matrix, compute_covariance_matrix
 
 __all__ = ['KK']
 
@@ -87,30 +88,9 @@ class KK(object):
         # Compute covariance matrices
         start = time.time()
         for cluster in xrange(2, num_clusters):
+            compute_covariance_matrix(self, cluster)
             cov = self.covariance[cluster]
-            spikes = self.spikes_in_cluster[cluster]
             block_diagonal = get_diagonal(cov.block)
-            for spike in spikes:
-                # compute main term of block
-                features = spike.features # profiling: 2% of M-step
-                f2m = zeros(num_features) # profiling: 4% of M-step
-                f2m[features.inds] = features.vals-self.data.noise_mean[features.inds] # profiling: 9% of M-step
-                cov.block += f2m[cov.unmasked, newaxis]*f2m[newaxis, cov.unmasked] # profiling: 20% of M-step
-                correction_term = zeros(num_features) # profiling: 4% of M-step
-                correction_term[features.inds] = spike.correction_term.vals # profiling: 4% of M-step
-                block_diagonal[:] += correction_term[cov.unmasked] # profiling: 10% of M-step
-                # TODO: optimisation where we do the simpler code below if the
-                # cluster mask is the same as the spike mask?
-                # if cluster mask is the same as spike mask
-                #f2m = features.vals-self.data.noise_mean[features.inds]
-                #cov.block += f2m[:, newaxis]*f2m[newaxis, :]
-                # add correction term to block diagonal
-                # if cluster mask is the same as spike mask
-                #block_diagonal[:] += spike.correction_term.vals
-            # Original code adds correction terms to masked diagonal part of
-            # matrix, but maybe this is inconsistent because we are assuming
-            # that the class as a whole is masked there so it should just get
-            # the prior point?
             
             # Add prior
             block_diagonal[:] += self.prior_point*self.data.noise_variance[cov.unmasked]
