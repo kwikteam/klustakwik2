@@ -27,6 +27,8 @@ class KK(object):
                  noise_point=1,
                  points_for_cluster_mask=10,
                  dist_thresh=log(1000),
+                 penalty_k=0.0,
+                 penalty_k_log_n=1.0,
                  ):
         
         self.data = data
@@ -36,6 +38,8 @@ class KK(object):
         self.noise_point = noise_point
         self.points_for_cluster_mask = points_for_cluster_mask
         self.dist_thresh = dist_thresh
+        self.penalty_k = penalty_k
+        self.penalty_k_log_n = penalty_k_log_n
     
     def cluster(self, num_starting_clusters):
         start = time.time()
@@ -60,7 +64,9 @@ class KK(object):
         start = time.time()
         self.C_step()
         print 'C_step:', time.time()-start
+        start = time.time()
         self.compute_cluster_penalties()
+        print 'compute_cluster_penalties:', time.time()-start
         if recurse:
             self.consider_deletion()
         self.compute_score()
@@ -150,15 +156,38 @@ class KK(object):
             compute_log_p(self, cluster, inv_cov_diag, log_root_det, chol)
         
     def C_step(self, allow_assign_to_noise=True):
-        self.clusters = argmin(self.log_p, axis=0)
+        if not allow_assign_to_noise:
+            cstart = 2
+        else:
+            cstart = 0
+        log_p = self.log_p[cstart:, :]
+        self.clusters = argmin(log_p, axis=0)+cstart
         R = arange(len(self.clusters))
         best_p = self.log_p[self.clusters, R]
         self.log_p[self.clusters, R] = inf
-        self.clusters_second_best = argmin(self.log_p, axis=0)
+        self.clusters_second_best = argmin(log_p, axis=0)+cstart
         self.log_p[self.clusters, R] = best_p
+        # We have changed clusters so now we need to reindex
+        self.reindex_clusters()
     
     def compute_cluster_penalties(self):
-        pass
+        num_cluster_members = self.num_cluster_members
+        num_clusters = len(self.num_cluster_members)
+        self.cluster_penalty = cluster_penalty = zeros(num_clusters)
+        sic = self.spikes_in_cluster
+        sico = self.spikes_in_cluster_offset
+        ustart = self.data.unmasked_start
+        uend = self.data.unmasked_end
+        penalty_k = self.penalty_k
+        penalty_k_log_n = self.penalty_k_log_n
+        for cluster in xrange(num_clusters):
+            curspikes = sic[sico[cluster]:sico[cluster+1]]
+            num_spikes = len(curspikes)
+            if num_spikes>0:
+                num_unmasked = uend[curspikes]-ustart[curspikes]
+                num_params = sum(num_unmasked*(num_unmasked+1)/2+num_unmasked+1)
+                mean_params = float(num_params)/num_spikes
+                cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(mean_params)/2    
     
     def consider_deletion(self):
         pass
