@@ -57,7 +57,9 @@ class KK(object):
         start = time.time()
         self.E_step()
         print 'E_step:', time.time()-start
+        start = time.time()
         self.C_step()
+        print 'C_step:', time.time()-start
         self.compute_cluster_penalties()
         if recurse:
             self.consider_deletion()
@@ -147,8 +149,13 @@ class KK(object):
                 
             compute_log_p(self, cluster, inv_cov_diag, log_root_det, chol)
         
-    def C_step(self):
-        pass
+    def C_step(self, allow_assign_to_noise=True):
+        self.clusters = argmin(self.log_p, axis=0)
+        R = arange(len(self.clusters))
+        best_p = self.log_p[self.clusters, R]
+        self.log_p[self.clusters, R] = inf
+        self.clusters_second_best = argmin(self.log_p, axis=0)
+        self.log_p[self.clusters, R] = best_p
     
     def compute_cluster_penalties(self):
         pass
