@@ -35,19 +35,32 @@ def compute_log_p(kk, cluster, inv_cov_diag, log_root_det, chol):
     noise_mean = data.noise_mean
     cluster_mean = kk.cluster_mean
     correction_terms = data.correction_terms
+    
+    clusters = kk.clusters
+    old_clusters = kk.old_clusters
+    dist_thresh = kk.dist_thresh
+    full_step = kk.full_step
 
-    do_computations(noise_mean, cluster_mean, correction_terms, log_p, inv_cov_diag, weight,
-                    unmasked, ustart, uend, features, vstart, vend,
-                    root, f2cm, num_features, num_spikes, log_addition, cluster,
-                    chol.block, chol.diagonal, chol.masked, chol.unmasked,
-                    )
+    num_skipped = do_computations(noise_mean, cluster_mean, correction_terms, log_p,
+                                  clusters, old_clusters, full_step, dist_thresh,
+                                  inv_cov_diag, weight,
+                                  unmasked, ustart, uend, features, vstart, vend,
+                                  root, f2cm, num_features, num_spikes, log_addition, cluster,
+                                  chol.block, chol.diagonal, chol.masked, chol.unmasked,
+                                  )
+    
+    return num_skipped
     
 
-cdef do_computations(
+cdef int do_computations(
             numpy.ndarray[double, ndim=1] noise_mean,
             numpy.ndarray[double, ndim=2] cluster_mean,
             numpy.ndarray[double, ndim=1] correction_terms,
             numpy.ndarray[double, ndim=2] log_p,
+            numpy.ndarray[int, ndim=1] clusters,
+            numpy.ndarray[int, ndim=1] old_clusters,
+            char full_step,
+            double dist_thresh,
             numpy.ndarray[double, ndim=1] inv_cov_diag,
             numpy.ndarray[double, ndim=1] weight,
             numpy.ndarray[int, ndim=1] unmasked,
@@ -76,7 +89,12 @@ cdef do_computations(
     cdef int chol_num_masked = len(chol_masked)
     cdef double * f2cm_ptr = &(f2cm[0])
     cdef double * root_ptr = &(root[0])
+    cdef int num_skipped = 0
     for p in range(num_spikes):
+        # to save time, only recalculate if the last one was close
+        if not full_step and clusters[p]==old_clusters[p] and log_p[cluster, p]-log_p[clusters[p], p]>dist_thresh:
+            num_skipped += 1
+            continue
         for i in range(num_features):
             f2cm[i] = noise_mean[i]-cluster_mean[cluster, i]
         num_unmasked = uend[p]-ustart[p]
@@ -99,6 +117,8 @@ cdef do_computations(
             mahal += inv_cov_diag[i]*correction_terms[vstart[p]+ii]
             
         log_p[cluster, p] = mahal/2.0+log_addition
+        
+    return num_skipped
 
 
 # TODO: check that the memory layout assumptions below are correct

@@ -26,6 +26,7 @@ class KK(object):
                  mua_point=1,
                  noise_point=1,
                  points_for_cluster_mask=10,
+                 dist_thresh=log(1000),
                  ):
         
         self.data = data
@@ -34,10 +35,12 @@ class KK(object):
         self.mua_point = mua_point
         self.noise_point = noise_point
         self.points_for_cluster_mask = points_for_cluster_mask
+        self.dist_thresh = dist_thresh
     
     def cluster(self, num_starting_clusters):
         start = time.time()
         self.clusters = mask_starts(self.data, num_starting_clusters)
+        self.old_clusters = -1*ones(len(self.clusters), dtype=int)
         print 'Mask starts:', time.time()-start
         start = time.time()
         self.reindex_clusters()
@@ -45,6 +48,9 @@ class KK(object):
         self.CEM()
     
     def CEM(self, recurse=True):
+        
+        self.full_step = True
+        
         start = time.time()
         self.M_step()
         print 'M_step:', time.time()-start
