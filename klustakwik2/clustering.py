@@ -68,7 +68,9 @@ class KK(object):
         self.compute_cluster_penalties()
         print 'compute_cluster_penalties:', time.time()-start
         if recurse:
+            start = time.time()
             self.consider_deletion()
+            print 'consider_deletion:', time.time()-start
         self.compute_score()
     
     def M_step(self):
@@ -168,7 +170,8 @@ class KK(object):
         self.clusters_second_best = argmin(log_p, axis=0)+cstart
         self.log_p[self.clusters, R] = best_p
         # We have changed clusters so now we need to reindex
-        self.reindex_clusters()
+        # no, we shouldn't reindex because if we do that invalidates log_p
+        #self.reindex_clusters()
     
     def compute_cluster_penalties(self):
         num_cluster_members = self.num_cluster_members
@@ -190,7 +193,28 @@ class KK(object):
                 cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(mean_params)/2    
     
     def consider_deletion(self):
-        pass
+        num_cluster_members = self.num_cluster_members
+        num_clusters = len(self.num_cluster_members)
+        sic = self.spikes_in_cluster
+        sico = self.spikes_in_cluster_offset
+        log_p = self.log_p
+        
+        deletion_loss = zeros(num_clusters)
+        I = arange(self.num_spikes)
+        add.at(deletion_loss, self.clusters, log_p[self.clusters_second_best, I]-log_p[self.clusters, I])
+        candidate_cluster = 2+argmin((deletion_loss-self.cluster_penalty)[2:])
+        loss = deletion_loss[candidate_cluster]
+        delta_pen = self.cluster_penalty[candidate_cluster]
+        
+        if loss<0:
+            # delete this cluster
+            # reassign points
+            cursic = sic[sico[candidate_cluster]:sico[candidate_cluster+1]]
+            self.clusters[cursic] = self.clusters_second_best[cursic]
+            # recompute penalties
+            self.compute_cluster_penalties()
+        
+        self.reindex_clusters() # this clobbers log_p
     
     def compute_score(self):
         pass
