@@ -29,6 +29,11 @@ class KK(object):
                  dist_thresh=log(1000),
                  penalty_k=0.0,
                  penalty_k_log_n=1.0,
+                 max_iterations=10000,
+                 num_changed_threshold=0.05,
+                 full_step_every=20,
+                 split_first=20,
+                 split_every=40,
                  ):
         
         self.data = data
@@ -40,6 +45,11 @@ class KK(object):
         self.dist_thresh = dist_thresh
         self.penalty_k = penalty_k
         self.penalty_k_log_n = penalty_k_log_n
+        self.max_iterations = max_iterations
+        self.num_changed_threshold = num_changed_threshold
+        self.full_step_every = full_step_every
+        self.split_first = split_first
+        self.split_every = split_every
     
     def cluster(self, num_starting_clusters):
         start = time.time()
@@ -56,23 +66,51 @@ class KK(object):
         score = old_score = 0.0
         
         self.full_step = True
+        self.current_iteration = 0
         
-        start = time.time()
-        self.M_step()
-        print 'M_step:', time.time()-start
-        start = time.time()
-        self.EC_steps()
-        print 'EC_steps:', time.time()-start
-        start = time.time()
-        self.compute_cluster_penalties()
-        print 'compute_cluster_penalties:', time.time()-start
-        if recurse:
+        while self.current_iteration==0: # for debugging
+        #while self.current_iteration<=self.max_iterations:
             start = time.time()
-            self.consider_deletion()
-            print 'consider_deletion:', time.time()-start
-        start = time.time()
-        old_score, score = score, self.compute_score()
-        print 'compute_score:', time.time()-start
+            self.M_step()
+            print 'M_step:', time.time()-start
+            start = time.time()
+            self.EC_steps()
+            print 'EC_steps:', time.time()-start
+            start = time.time()
+            self.compute_cluster_penalties()
+            print 'compute_cluster_penalties:', time.time()-start
+            if recurse:
+                start = time.time()
+                self.consider_deletion()
+                print 'consider_deletion:', time.time()-start
+            start = time.time()
+            old_score, score = score, self.compute_score()
+            print 'compute_score:', time.time()-start
+            
+            num_changed = sum(self.clusters!=self.old_clusters)
+            
+            self.current_iteration += 1
+    
+            last_step_full = self.full_step
+            # TODO: add this back in when we have num_changed, etc.
+            self.full_step = (num_changed>self.num_changed_threshold*self.num_spikes or
+                              num_changed==0 or
+                              self.current_iteration % self.full_step_every == 0 or
+                              score > old_score) 
+    
+            # TODO: save current progress
+
+            # Try splitting
+            did_split = False
+            if recurse and self.split_every>0:
+                if (self.current_iteration==self.split_first or
+                    (self.current_iteration>self.split_first or
+                     self.current_iteration-self.split_first%self.split_every==self.split_every-1 or
+                     (num_changed==0 and last_step_full))):
+                    did_split = self.try_splits()
+                    
+            if num_changed==0 and last_step_full and not did_split:
+                break 
     
     def M_step(self):
         # eliminate any clusters with 0 members, compute the list of spikes
@@ -132,6 +170,7 @@ class KK(object):
         
         weight = self.weight
 
+        self.old_clusters = self.clusters
         self.clusters = -ones(num_spikes, dtype=int)
         self.clusters_second_best = -ones(num_spikes, dtype=int)
         self.log_p_best = inf*ones(num_spikes)
@@ -300,3 +339,5 @@ class KK(object):
             self.cluster_unmasked_features.append(unmasked)
             self.covariance.append(BlockPlusDiagonalMatrix(masked, unmasked))
             
+    def try_splits(self):
+        return False
