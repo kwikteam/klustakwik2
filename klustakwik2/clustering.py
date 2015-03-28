@@ -7,7 +7,7 @@ from .linear_algebra import BlockPlusDiagonalMatrix
 
 from .cylib.compute_cluster_masks import accumulate_cluster_mask_sum
 from .cylib.m_step import compute_cluster_means, compute_covariance_matrix
-from .cylib.e_step import compute_log_p
+from .cylib.e_step import compute_log_p_and_assign
 
 import time
 
@@ -58,12 +58,15 @@ class KK(object):
         start = time.time()
         self.M_step()
         print 'M_step:', time.time()-start
+#         start = time.time()
+#         self.E_step()
+#         print 'E_step:', time.time()-start
+#         start = time.time()
+#         self.C_step()
+#         print 'C_step:', time.time()-start
         start = time.time()
-        self.E_step()
-        print 'E_step:', time.time()-start
-        start = time.time()
-        self.C_step()
-        print 'C_step:', time.time()-start
+        self.EC_steps()
+        print 'EC_steps:', time.time()-start
         start = time.time()
         self.compute_cluster_penalties()
         print 'compute_cluster_penalties:', time.time()-start
@@ -118,24 +121,34 @@ class KK(object):
             cov.diagonal *= factor
                         
         print 'Compute covariance matrices:', time.time()-start
-            
-    def E_step(self):
+                    
+    def EC_steps(self, allow_assign_to_noise=True):
+        if not allow_assign_to_noise:
+            cluster_start = 2
+        else:
+            cluster_start = 1
+
         num_spikes = self.num_spikes
         num_clusters = len(self.num_cluster_members)
         num_features = self.num_features
         
         weight = self.weight
 
-        self.log_p = log_p = zeros((num_clusters, num_spikes))
+        self.clusters = -ones(num_spikes, dtype=int)
+        self.clusters_second_best = -ones(num_spikes, dtype=int)
+        self.log_p_best = inf*ones(num_spikes)
+        self.log_p_second_best = inf*ones(num_spikes)
         num_skipped = 0
         
         # start with cluster 0 - uniform distribution over space
         # because we have normalized all dims to 0...1, density will be 1.
-        log_p[0, :] = -log(weight[0])
+        if allow_assign_to_noise:
+            self.clusters[:] = 0
+            self.log_p_best[:] = -log(weight[0])
         
         clusters_to_kill = []
         
-        for cluster in xrange(1, num_clusters):
+        for cluster in xrange(cluster_start, num_clusters):
             cov = self.covariance[cluster]
             try:
                 chol = cov.cholesky()
@@ -155,23 +168,7 @@ class KK(object):
                 inv_cov_diag[i] = sum(root**2)
                 basis_vector[i] = 0.0
                 
-            compute_log_p(self, cluster, inv_cov_diag, log_root_det, chol)
-        
-    def C_step(self, allow_assign_to_noise=True):
-        if not allow_assign_to_noise:
-            cstart = 2
-        else:
-            cstart = 0
-        log_p = self.log_p[cstart:, :]
-        self.clusters = argmin(log_p, axis=0)+cstart
-        R = arange(len(self.clusters))
-        best_p = self.log_p[self.clusters, R]
-        self.log_p[self.clusters, R] = inf
-        self.clusters_second_best = argmin(log_p, axis=0)+cstart
-        self.log_p[self.clusters, R] = best_p
-        # We have changed clusters so now we need to reindex
-        # no, we shouldn't reindex because if we do that invalidates log_p
-        #self.reindex_clusters()
+            compute_log_p_and_assign(self, cluster, inv_cov_diag, log_root_det, chol)
     
     def compute_cluster_penalties(self):
         num_cluster_members = self.num_cluster_members
@@ -193,15 +190,17 @@ class KK(object):
                 cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(mean_params)/2    
     
     def consider_deletion(self):
+        # TODO: cluster members at this point hasn't been reindexed
         num_cluster_members = self.num_cluster_members
         num_clusters = len(self.num_cluster_members)
         sic = self.spikes_in_cluster
         sico = self.spikes_in_cluster_offset
-        log_p = self.log_p
+        log_p_best = self.log_p_best
+        log_p_second_best = self.log_p_second_best
         
         deletion_loss = zeros(num_clusters)
         I = arange(self.num_spikes)
-        add.at(deletion_loss, self.clusters, log_p[self.clusters_second_best, I]-log_p[self.clusters, I])
+        add.at(deletion_loss, self.clusters, log_p_second_best-log_p_best)
         candidate_cluster = 2+argmin((deletion_loss-self.cluster_penalty)[2:])
         loss = deletion_loss[candidate_cluster]
         delta_pen = self.cluster_penalty[candidate_cluster]
