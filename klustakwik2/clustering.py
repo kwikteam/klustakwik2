@@ -58,12 +58,6 @@ class KK(object):
         start = time.time()
         self.M_step()
         print 'M_step:', time.time()-start
-#         start = time.time()
-#         self.E_step()
-#         print 'E_step:', time.time()-start
-#         start = time.time()
-#         self.C_step()
-#         print 'C_step:', time.time()-start
         start = time.time()
         self.EC_steps()
         print 'EC_steps:', time.time()-start
@@ -169,6 +163,11 @@ class KK(object):
                 basis_vector[i] = 0.0
                 
             compute_log_p_and_assign(self, cluster, inv_cov_diag, log_root_det, chol)
+
+        # we've reassigned clusters so we need to recompute the partitions, but we don't want to
+        # reindex yet because we may reassign points to different clusters and we need the original
+        # cluster numbers for that
+        self.partition_clusters()
     
     def compute_cluster_penalties(self):
         num_cluster_members = self.num_cluster_members
@@ -187,10 +186,9 @@ class KK(object):
                 num_unmasked = uend[curspikes]-ustart[curspikes]
                 num_params = sum(num_unmasked*(num_unmasked+1)/2+num_unmasked+1)
                 mean_params = float(num_params)/num_spikes
-                cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(mean_params)/2    
+                cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(mean_params)/2
     
     def consider_deletion(self):
-        # TODO: cluster members at this point hasn't been reindexed
         num_cluster_members = self.num_cluster_members
         num_clusters = len(self.num_cluster_members)
         sic = self.spikes_in_cluster
@@ -212,9 +210,7 @@ class KK(object):
             self.clusters[cursic] = self.clusters_second_best[cursic]
             # recompute penalties
             self.compute_cluster_penalties()
-        
-        self.reindex_clusters() # this clobbers log_p
-    
+            
     def compute_score(self):
         pass
 
@@ -243,6 +239,11 @@ class KK(object):
         I[0:2] = True # we keep clusters 0 and 1
         remapping = hstack((0, cumsum(I)))[:-1]
         self.clusters = remapping[self.clusters]
+        if hasattr(self, 'clusters_second_best'):
+            del self.clusters_second_best
+        self.partition_clusters()
+        
+    def partition_clusters(self):
         self.num_cluster_members = num_cluster_members = array(bincount(self.clusters), dtype=int)
         I = array(argsort(self.clusters), dtype=int)
         y = self.clusters[I]
