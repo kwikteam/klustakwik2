@@ -211,6 +211,13 @@ class KK(object):
             # recompute penalties
             self.compute_cluster_penalties()
             
+        # at this point we have invalidated the partitions, so to make sure we don't miss
+        # something, we wipe them out here
+        self.invalidate_partitions()
+        # we've also invalidated the second best log_p and clusters
+        self.log_p_second_best = None
+        self.clusters_second_best = None
+            
     def compute_score(self):
         pass
 
@@ -251,6 +258,11 @@ class KK(object):
         J = searchsorted(y, arange(n))
         self.spikes_in_cluster = I
         self.spikes_in_cluster_offset = J
+    
+    def invalidate_partitions(self):
+        self.num_cluster_members = None
+        self.spikes_in_cluster = None
+        self.spikes_in_cluster_offset = None
         
     def compute_cluster_masks(self):
         '''
