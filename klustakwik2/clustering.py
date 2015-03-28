@@ -53,6 +53,8 @@ class KK(object):
     
     def CEM(self, recurse=True):
         
+        score = old_score = 0.0
+        
         self.full_step = True
         
         start = time.time()
@@ -68,7 +70,9 @@ class KK(object):
             start = time.time()
             self.consider_deletion()
             print 'consider_deletion:', time.time()-start
-        self.compute_score()
+        start = time.time()
+        old_score, score = score, self.compute_score()
+        print 'compute_score:', time.time()-start
     
     def M_step(self):
         # eliminate any clusters with 0 members, compute the list of spikes
@@ -208,6 +212,7 @@ class KK(object):
             # reassign points
             cursic = sic[sico[candidate_cluster]:sico[candidate_cluster+1]]
             self.clusters[cursic] = self.clusters_second_best[cursic]
+            self.log_p_best[cursic] = self.log_p_second_best[cursic]
             # recompute penalties
             self.compute_cluster_penalties()
             
@@ -219,7 +224,9 @@ class KK(object):
         self.clusters_second_best = None
             
     def compute_score(self):
-        pass
+        score = sum(self.cluster_penalty)
+        score += sum(self.log_p_best)
+        return score
 
     @property
     def num_spikes(self):
