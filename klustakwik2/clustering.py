@@ -215,13 +215,13 @@ class KK(object):
         spikes_in_cluster[spikes_in_cluster_offset[c]:spikes_in_cluster_offset[c+1]] will be in the indices
         of all the spikes in cluster c. 
         '''
-        num_cluster_members = bincount(self.clusters)
+        num_cluster_members = array(bincount(self.clusters), dtype=int)
         I = num_cluster_members>0
         I[0:2] = True # we keep clusters 0 and 1
         remapping = hstack((0, cumsum(I)))[:-1]
         self.clusters = remapping[self.clusters]
-        self.num_cluster_members = num_cluster_members = bincount(self.clusters)
-        I = argsort(self.clusters)
+        self.num_cluster_members = num_cluster_members = array(bincount(self.clusters), dtype=int)
+        I = array(argsort(self.clusters), dtype=int)
         y = self.clusters[I]
         n = amax(y)+2
         J = searchsorted(y, arange(n))
@@ -251,6 +251,8 @@ class KK(object):
             curmask = cluster_mask_sum[cluster, :]
             unmasked, = (curmask>=self.points_for_cluster_mask).nonzero()
             masked, = (curmask<self.points_for_cluster_mask).nonzero()
+            unmasked = array(unmasked, dtype=int)
+            masked = array(masked, dtype=int)
             self.cluster_masked_features.append(masked)
             self.cluster_unmasked_features.append(unmasked)
             self.covariance.append(BlockPlusDiagonalMatrix(masked, unmasked))
