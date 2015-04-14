@@ -21,11 +21,11 @@ def compute_cluster_means(kk):
     unmasked = data.unmasked
     ustart = data.unmasked_start
     uend = data.unmasked_end
-    masks = data.masks
+    features = data.features
     vstart = data.values_start
     vend = data.values_end
 
-    do_mean_accum(clusters, unmasked, ustart, uend, masks, vstart, vend, cluster_mean, num_added)
+    do_mean_accum(clusters, unmasked, ustart, uend, features, vstart, vend, cluster_mean, num_added)
         
     for cluster in range(num_clusters):
         prior = 0
