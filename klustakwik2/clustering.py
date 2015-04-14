@@ -55,7 +55,7 @@ class KK(object):
         self.reindex_clusters()
         self.CEM()
     
-    def CEM(self, recurse=True):
+    def CEM(self, recurse=True, allow_assign_to_noise=True):
         
         score = old_score = 0.0
         
@@ -65,7 +65,7 @@ class KK(object):
         while self.current_iteration==0: # for debugging
         #while self.current_iteration<=self.max_iterations:
             self.M_step()
-            self.EC_steps()
+            self.EC_steps(allow_assign_to_noise=allow_assign_to_noise)
             self.compute_cluster_penalties()
             if recurse:
                 self.consider_deletion()
@@ -95,7 +95,9 @@ class KK(object):
                     did_split = self.try_splits()
                     
             if num_changed==0 and last_step_full and not did_split:
-                break 
+                break
+            
+        return score
     
     def M_step(self):
         # eliminate any clusters with 0 members, compute the list of spikes
@@ -291,6 +293,11 @@ class KK(object):
         self.spikes_in_cluster = None
         self.spikes_in_cluster_offset = None
         
+    def get_spikes_in_cluster(self, cluster):
+        sic = self.spikes_in_cluster
+        sico = self.spikes_in_cluster_offset
+        return sic[sico[cluster]:sico[cluster+1]]
+        
     def compute_cluster_masks(self):
         '''
         Computes the masked and unmasked indices for each cluster based on the
@@ -352,52 +359,17 @@ class KK(object):
         score = self.compute_score()
         
         for cluster in xrange(2, num_clusters):
-            pass
-# 
-#         // set up K2 structure to contain points of this cluster only
-# 
-#         vector<integer> SubsetIndices;
-#         for(p=0; p<nPoints; p++)
-#             if(Class[p]==c)
-#                 SubsetIndices.push_back(p);
-#         if(SubsetIndices.size()==0)
-#             continue;
-# 
-#         if (K2_container)
-#         {
-#             // We have to clear these to bypass the debugging checks
-#             // in precomputations.cpp
-#             K2_container->Unmasked.clear();
-#             K2_container->UnmaskedInd.clear();
-#             K2_container->SortedMaskChange.clear();
-#             K2_container->SortedIndices.clear();
-#             //K2_container->AllVector2Mean.clear();
-#             // now we treat it as empty
-#             K2_container->ConstructFrom(*this, SubsetIndices);
-#         }
-#         else
-#         {
-#             K2_container = new KK(*this, SubsetIndices);
-#         }
-#         //KK K2(*this, SubsetIndices);
-#         KK &K2 = *K2_container;
-# 
-#         // find an unused cluster
-#         UnusedCluster = -1;
-#         for(c2=2; c2<MaxPossibleClusters; c2++)
-#         {
-#              if (!ClassAlive[c2])
-#              {
-#                  UnusedCluster = c2;
-#                  break;
-#              }
-#         }
-#         if (UnusedCluster==-1)
-#         {
-#             Output("No free clusters, abandoning split");
-#             return DidSplit;
-#         }
-# 
+            spikes_in_cluster = self.get_spikes_in_cluster(cluster)
+            if len(spikes_in_cluster)==0:
+                continue
+            K2 = self.subset(spikes_in_cluster)
+            # at this point in C++ code we look for an unused cluster, but here we can just
+            # use num_clusters+1
+            # TODO: logging
+            # TODO: initialise with current clusters, do not allow creation of new clusters
+            unsplit_score = K2.CEM(recurse=False, allow_assign_to_noise=False)
+            # TODO: initialise randomly, allow for one additional cluster
+            split_score = K2.CEM(recurse=False, allow_assign_to_noise=False)
 #         // do it
 #         if (Verbose >= 1) Output("\n Trying to split cluster %d (%d points) \n", (int)c, (int)K2.nPoints);
 #         K2.nStartingClusters=3; // (3 = 1 clusters + 2 unused noise/MUA cluster)
