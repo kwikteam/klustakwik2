@@ -6,7 +6,9 @@ from .mask_starts import mask_starts
 from .linear_algebra import BlockPlusDiagonalMatrix
 
 from .cylib.compute_cluster_masks import accumulate_cluster_mask_sum
-from .cylib.m_step import compute_cluster_means, compute_covariance_matrix
+# from .cylib.m_step import compute_cluster_means, compute_covariance_matrix
+from .cylib.m_step import compute_covariance_matrix
+from .numbalib.m_step import compute_cluster_means
 from .cylib.e_step import compute_log_p_and_assign
 
 import time
@@ -52,13 +54,9 @@ class KK(object):
         self.split_every = split_every
     
     def cluster(self, num_starting_clusters):
-        start = time.time()
         self.clusters = mask_starts(self.data, num_starting_clusters)
         self.old_clusters = -1*ones(len(self.clusters), dtype=int)
-        print 'Mask starts:', time.time()-start
-        start = time.time()
         self.reindex_clusters()
-        print 'Reindex clusters:', time.time()-start
         self.CEM()
     
     def CEM(self, recurse=True):
@@ -70,22 +68,12 @@ class KK(object):
         
         while self.current_iteration==0: # for debugging
         #while self.current_iteration<=self.max_iterations:
-            start = time.time()
             self.M_step()
-            print 'M_step:', time.time()-start
-            start = time.time()
             self.EC_steps()
-            print 'EC_steps:', time.time()-start
-            start = time.time()
             self.compute_cluster_penalties()
-            print 'compute_cluster_penalties:', time.time()-start
             if recurse:
-                start = time.time()
                 self.consider_deletion()
-                print 'consider_deletion:', time.time()-start
-            start = time.time()
             old_score, score = score, self.compute_score()
-            print 'compute_score:', time.time()-start
             
             num_changed = sum(self.clusters!=self.old_clusters)
             
@@ -116,10 +104,8 @@ class KK(object):
         # eliminate any clusters with 0 members, compute the list of spikes
         # in each cluster, compute the cluster masks and allocate space for
         # covariance matrices
-        start = time.time()
         self.reindex_clusters()
         self.compute_cluster_masks()
-        print 'compute_cluster_masks:', time.time()-start  
 
         num_cluster_members = self.num_cluster_members
         num_clusters = len(self.num_cluster_members)
@@ -136,12 +122,12 @@ class KK(object):
         # Compute means for each cluster
         # Note that we do this densely at the moment, might want to switch
         # that to a sparse structure later
+        compute_cluster_means(self)
         start = time.time()
         self.cluster_mean = compute_cluster_means(self)
-        print 'Compute cluster_mean:', time.time()-start  
-                
+        print time.time()-start
+        
         # Compute covariance matrices
-        start = time.time()
         for cluster in xrange(2, num_clusters):
             compute_covariance_matrix(self, cluster)
             cov = self.covariance[cluster]
@@ -155,8 +141,6 @@ class KK(object):
             factor = 1.0/(num_cluster_members[cluster]+self.prior_point-1)
             cov.block *= factor
             cov.diagonal *= factor
-                        
-        print 'Compute covariance matrices:', time.time()-start
                     
     def EC_steps(self, allow_assign_to_noise=True):
         if not allow_assign_to_noise:
