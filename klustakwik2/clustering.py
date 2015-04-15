@@ -29,10 +29,9 @@ default_parameters = dict(
      mua_point=1,
      noise_point=1,
      points_for_cluster_mask=10,
-     dist_thresh=log(1000),
      penalty_k=0.0,
      penalty_k_log_n=1.0,
-     max_iterations=10000,
+     max_iterations=10,
      num_changed_threshold=0.05,
      full_step_every=20,
      split_first=20,
@@ -54,6 +53,7 @@ class KK(object):
             self.log_prefix = log_prefix+': '
             
     def log(self, level, msg):
+        # todo: would be better to use a logging hierarchy and filter out K2 and K3 in console
         log_message(level, self.log_prefix+msg)
             
     def copy(self, log_prefix='Copy'):
@@ -86,8 +86,8 @@ class KK(object):
 
         score = old_score = 0.0
                 
-        while self.current_iteration==0: # for debugging
-        #while self.current_iteration<=self.max_iterations:
+        #while self.current_iteration==0: # for debugging
+        while self.current_iteration<=self.max_iterations:
             self.log('debug', 'Starting iteration %d' % self.current_iteration)
             self.log('debug', 'Starting M-step')
             self.M_step()

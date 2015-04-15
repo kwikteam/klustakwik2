@@ -63,14 +63,13 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol):
     clusters = kk.clusters
     clusters_second_best = kk.clusters_second_best
     old_clusters = kk.old_clusters
-    dist_thresh = kk.dist_thresh
     full_step = kk.full_step
 
     num_skipped = do_log_p_assign_computations(
                                   noise_mean, cluster_mean, correction_terms,
                                   log_p_best, log_p_second_best,
                                   clusters, clusters_second_best, old_clusters,
-                                  full_step, dist_thresh,
+                                  full_step,
                                   inv_cov_diag, weight,
                                   unmasked, ustart, uend, features, vstart, vend,
                                   root, f2cm, num_features, num_spikes, log_addition, cluster,
@@ -90,7 +89,6 @@ cdef int do_log_p_assign_computations(
             numpy.ndarray[int, ndim=1] clusters_second_best,
             numpy.ndarray[int, ndim=1] old_clusters,
             char full_step,
-            double dist_thresh,
             numpy.ndarray[double, ndim=1] inv_cov_diag,
             numpy.ndarray[double, ndim=1] weight,
             numpy.ndarray[int, ndim=1] unmasked,
