@@ -41,6 +41,8 @@ def _compute_cluster_means(
             num_added[c, j] += 1
 
     for cluster in xrange(num_clusters):
+        if num_cluster_members[cluster]==0:
+            continue
         prior = 0
         if cluster==1:
             prior = mua_point

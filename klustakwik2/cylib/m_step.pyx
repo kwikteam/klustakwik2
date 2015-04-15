@@ -70,7 +70,6 @@ def compute_covariance_matrix(kk, cluster):
     num_features = kk.num_features
 
     cov = kk.covariance[cluster]
-    spikes = kk.spikes_in_cluster[cluster]
     block = cov.block
     
     spikes_in_cluster = kk.spikes_in_cluster

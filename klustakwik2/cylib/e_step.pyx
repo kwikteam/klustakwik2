@@ -152,12 +152,12 @@ cdef int do_log_p_assign_computations(
         cur_log_p_best = log_p_best[p]
         cur_log_p_second_best = log_p_second_best[p]
         
-        if log_p>cur_log_p_best:
+        if log_p<cur_log_p_best:
             log_p_second_best[p] = cur_log_p_best
             clusters_second_best[p] = clusters[p]
             log_p_best[p] = log_p
             clusters[p] = cluster
-        elif log_p>cur_log_p_second_best:
+        elif log_p<cur_log_p_second_best:
             log_p_second_best[p] = log_p
             clusters_second_best[p] = cluster
         

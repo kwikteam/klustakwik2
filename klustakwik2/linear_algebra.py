@@ -31,6 +31,8 @@ class BlockPlusDiagonalMatrix(object):
             block, lower = cho_factor(self.block)
             if lower:
                 block = block.T.copy()
+        else:
+            block = zeros_like(self.block)
         if (self.diagonal<=0).any():
             raise LinAlgError
         diagonal = sqrt(self.diagonal)
@@ -38,6 +40,7 @@ class BlockPlusDiagonalMatrix(object):
     
     def trisolve(self, x):
         out = zeros(len(x))
-        out[self.unmasked] = cho_solve((self.block, False), x[self.unmasked])
+        if len(self.unmasked):
+            out[self.unmasked] = cho_solve((self.block, False), x[self.unmasked])            
         out[self.masked] = -x[self.masked]/self.diagonal
         return out
