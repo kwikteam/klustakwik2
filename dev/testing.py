@@ -6,6 +6,8 @@ import os
 
 fname, shank = '../temp/testsmallish', 4
 
+log_to_file(fname+'.klg', 'debug')
+
 if os.path.exists(fname+'.pickle'):
     start_time = time.time()
     data = pickle.load(open(fname+'.pickle', 'rb'))

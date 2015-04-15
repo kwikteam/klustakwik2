@@ -3,6 +3,8 @@ from numpy.linalg import LinAlgError
 from numpy.random import randint
 from itertools import izip
 
+from .logger import log_message
+
 from .mask_starts import mask_starts
 from .linear_algebra import BlockPlusDiagonalMatrix
 
@@ -39,20 +41,27 @@ default_parameters = dict(
      )                          
 
 class KK(object):
-    def __init__(self, data, **params):        
+    def __init__(self, data, log_prefix=None, **params):        
         self.data = data
         self.params = params
         actual_params = default_parameters.copy()
         actual_params.update(**params)
         for k, v in actual_params.iteritems():
             setattr(self, k, v)
+        if log_prefix is None:
+            self.log_prefix = ''
+        else:
+            self.log_prefix = log_prefix+': '
             
-    def copy(self):
-        return KK(self.data, **self.params)
+    def log(self, level, msg):
+        log_message(level, self.log_prefix+msg)
+            
+    def copy(self, log_prefix='Copy'):
+        return KK(self.data, log_prefix=self.log_prefix+log_prefix, **self.params)
         
-    def subset(self, spikes):
+    def subset(self, spikes, log_prefix='Subset'):
         newdata = self.data.subset(spikes)
-        return KK(newdata, **self.params)
+        return KK(newdata, log_prefix=self.log_prefix+log_prefix, **self.params)
     
     def initialise_clusters(self, clusters):
         self.clusters = clusters
@@ -60,6 +69,7 @@ class KK(object):
         self.reindex_clusters()
     
     def cluster(self, num_starting_clusters):
+        self.log('info', 'Clustering full data set of %d points' % self.data.num_spikes)
         clusters = mask_starts(self.data, num_starting_clusters)
         self.cluster_from(clusters)
         
@@ -78,12 +88,23 @@ class KK(object):
                 
         while self.current_iteration==0: # for debugging
         #while self.current_iteration<=self.max_iterations:
+            self.log('debug', 'Starting iteration %d' % self.current_iteration)
+            self.log('debug', 'Starting M-step')
             self.M_step()
+            self.log('debug', 'Finished M-step')
+            self.log('debug', 'Starting EC-steps')
             self.EC_steps(allow_assign_to_noise=allow_assign_to_noise)
+            self.log('debug', 'Finished EC-steps')
+            self.log('debug', 'Starting compute_cluster_penalties')
             self.compute_cluster_penalties()
+            self.log('debug', 'Finished compute_cluster_penalties')
             if recurse:
+                self.log('debug', 'Starting consider_deletion')
                 self.consider_deletion()
+                self.log('debug', 'Finished consider_deletion')
+            self.log('debug', 'Starting compute_score')
             old_score, score = score, self.compute_score()
+            self.log('debug', 'Finished compute_score')
             
             num_changed = sum(self.clusters!=self.old_clusters)
             
@@ -95,7 +116,15 @@ class KK(object):
                               num_changed==0 or
                               self.current_iteration % self.full_step_every == 0 or
                               score > old_score) 
+
+            self.reindex_clusters()
     
+            QF_id = {True:'F', False:'Q'}[self.full_step]
+            self.log('info', 'Iteration %d%s: %d clusters, %d changed' % (self.current_iteration,
+                                                                          QF_id,
+                                                                          self.num_clusters_alive,
+                                                                          num_changed))
+
             # TODO: save current progress
 
             # Try splitting
@@ -106,11 +135,15 @@ class KK(object):
 #                      self.current_iteration-self.split_first%self.split_every==self.split_every-1 or
 #                      (num_changed==0 and last_step_full))):
                 if True:
-                    self.reindex_clusters()
                     did_split = self.try_splits()
                     
             if num_changed==0 and last_step_full and not did_split:
+                self.log('info', 'No points changed, previous step was full and did not split, '
+                                 'so finishing.')
                 break
+        else:
+            # ran out of iterations
+            self.log('info', 'Number of iterations exceeded maximum %d' % self.max_iterations)
             
         return score
     
@@ -244,6 +277,12 @@ class KK(object):
         
         if loss<0:
             # delete this cluster
+            num_points_in_candidate = sico[candidate_cluster+1]-sico[candidate_cluster]
+            self.log('info', 'Deleting cluster {cluster} ({numpoints} points): lose {lose} but '
+                             'gain {gain}'.format(cluster=candidate_cluster,
+                                                  numpoints=num_points_in_candidate,
+                                                  lose=deletion_loss[candidate_cluster],
+                                                  gain=delta_pen))
             # reassign points
             cursic = sic[sico[candidate_cluster]:sico[candidate_cluster+1]]
             self.clusters[cursic] = self.clusters_second_best[cursic]
@@ -259,8 +298,10 @@ class KK(object):
         self.clusters_second_best = None
             
     def compute_score(self):
-        score = sum(self.cluster_penalty)
-        score += sum(self.log_p_best)
+        penalty = sum(self.cluster_penalty)
+        raw = sum(self.log_p_best)
+        score = raw+penalty
+        self.log('info', 'Score: raw %f + penalty %f = %f' % (raw, penalty, score))
         return score
 
     @property
@@ -348,20 +389,22 @@ class KK(object):
         did_split = False
         num_clusters = self.num_clusters_alive
         
+        self.log('info', 'Computing score before splitting')
         score = self.compute_score()
         
         for cluster in xrange(2, num_clusters):
             if num_clusters>=self.max_possible_clusters:
-                # todo: logging
+                self.log('info', 'No more splitting, already at maximum number of '
+                                 'clusters' % self.max_possible_clusters)
                 return did_split
             
             spikes_in_cluster = self.get_spikes_in_cluster(cluster)
             if len(spikes_in_cluster)==0:
                 continue
-            K2 = self.subset(spikes_in_cluster)
+            K2 = self.subset(spikes_in_cluster, log_prefix='Split candidate')
             # at this point in C++ code we look for an unused cluster, but here we can just
             # use num_clusters+1
-            # TODO: logging
+            self.log('info', 'Trying to split cluster %d' % cluster)
             # initialise with current clusters, do not allow creation of new clusters
             K2.max_possible_clusters = 3
             clusters = full(len(spikes_in_cluster), 2, dtype=int)
@@ -401,7 +444,7 @@ class KK(object):
 #             }
 
             # will splitting improve the score in the whole data set?
-            K3 = self.copy()
+            K3 = self.copy(log_prefix='Split evaluation')
             K3.prepare_for_CEM()
             clusters = self.clusters.copy()
             I3 = (K2.clusters==3)

@@ -1,4 +1,5 @@
 from numpy import *
+from .logger import log_message
 
 __all__ = ['mask_starts']
 
@@ -11,9 +12,10 @@ def mask_difference(A, B, n):
 
 
 def mask_starts(data, num_clusters):
+    log_message('info', 'Using mask starts with %d clusters' % num_clusters)
     if data.num_masks<num_clusters:
-        print ('Not enough masks (%d) for that many starting '
-               'clusters (%d)') % (data.num_masks, num_clusters)
+        log_message('warning', ('Not enough masks (%d) for specified number of starting '
+                                'clusters (%d)') % (data.num_masks, num_clusters))
         num_clusters = data.num_masks
     clusters = zeros(data.num_spikes, dtype=int)
     found = dict()
