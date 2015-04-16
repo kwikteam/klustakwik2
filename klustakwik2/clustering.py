@@ -41,17 +41,25 @@ default_parameters = dict(
 
 class KK(object):
     def __init__(self, data, log_prefix='', **params):        
+        self.log_prefix = log_prefix
         self.data = data
         self.params = params
         actual_params = default_parameters.copy()
         actual_params.update(**params)
         for k, v in actual_params.iteritems():
             setattr(self, k, v)
-        self.log_prefix = log_prefix
+            if log_prefix=='':
+                self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
             
-    def log(self, level, msg):
-        # todo: would be better to use a logging hierarchy and filter out K2 and K3 in console
-        log_message(level, msg, name=self.log_prefix)
+    def log(self, level, msg, suffix=None):
+        if suffix is not None:
+            if self.log_prefix=='':
+                name = suffix
+            else:
+                name = self.log_prefix+'.'+suffix
+        else:
+            name = self.log_prefix
+        log_message(level, msg, name=name)
             
     def copy(self, log_prefix='kk_copy'):
         if self.log_prefix:
