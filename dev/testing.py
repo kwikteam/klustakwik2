@@ -25,9 +25,14 @@ else:
 print 'Number of spikes:', data.num_spikes
 print 'Number of unique masks:', data.num_masks
 
-kk = KK(data)
+# def callback(name, iter):
+#     if name=='':
+#         print 'Finished iteration', iter
 
-if os.path.exists(fname+'.clu.pickle'):
+kk = KK(data)#, iteration_callback=callback)
+
+#if os.path.exists(fname+'.clu.pickle'):
+if False:
     print 'Loading clusters from file'
     clusters = pickle.load(open(fname+'.clu.pickle', 'rb'))
 else:

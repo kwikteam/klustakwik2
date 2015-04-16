@@ -40,8 +40,11 @@ default_parameters = dict(
      )                          
 
 class KK(object):
-    def __init__(self, data, log_prefix='', **params):        
+    def __init__(self, data, log_prefix='',
+                 iteration_callback=None,
+                 **params):
         self.log_prefix = log_prefix
+        self.iteration_callback = iteration_callback
         self.data = data
         self.params = params
         actual_params = default_parameters.copy()
@@ -66,7 +69,9 @@ class KK(object):
             sep = '.'
         else:
             sep = ''
-        return KK(self.data, log_prefix=self.log_prefix+sep+log_prefix, **self.params)
+        return KK(self.data, log_prefix=self.log_prefix+sep+log_prefix,
+                  iteration_callback=self.iteration_callback,
+                  **self.params)
         
     def subset(self, spikes, log_prefix='kk_subset'):
         newdata = self.data.subset(spikes)
@@ -74,7 +79,9 @@ class KK(object):
             sep = '.'
         else:
             sep = ''
-        return KK(newdata, log_prefix=self.log_prefix+sep+log_prefix, **self.params)
+        return KK(newdata, log_prefix=self.log_prefix+sep+log_prefix,
+                  iteration_callback=self.iteration_callback,
+                  **self.params)
     
     def initialise_clusters(self, clusters):
         self.clusters = clusters
@@ -148,6 +155,9 @@ class KK(object):
                     (num_changed==0 and last_step_full)):
 #                 if True:
                     did_split = self.try_splits()
+                    
+            if self.iteration_callback is not None:
+                self.iteration_callback(self.log_prefix, self.current_iteration)
                     
             if num_changed==0 and last_step_full and not did_split:
                 self.log('info', 'No points changed, previous step was full and did not split, '
