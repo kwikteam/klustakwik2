@@ -36,7 +36,8 @@ default_parameters = dict(
      full_step_every=20,
      split_first=20,
      split_every=40,
-     max_possible_clusters=100,
+     max_possible_clusters=1000,
+     mask_starts=500,
      )                          
 
 class KK(object):

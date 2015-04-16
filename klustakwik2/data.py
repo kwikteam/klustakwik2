@@ -2,6 +2,7 @@ from numpy import *
 import time
 
 from .precomputations import sort_masks, compute_correction_terms_and_replace_data
+from .logger import log_message
 
 __all__ = ['RawSparseData', 'SparseData',
            ]
@@ -51,12 +52,12 @@ class RawSparseData(object):
     def to_sparse_data(self):
         values_start = self.offsets[:-1]
         values_end = self.offsets[1:]
-        start_time = time.time()
+        log_message('debug', 'Starting compute_correction_terms_and_replace_data', name='data')
         features, correction_terms = compute_correction_terms_and_replace_data(self)
-        print 'compute correction terms:', time.time()-start_time
-        start_time = time.time()
+        log_message('debug', 'Finished compute_correction_terms_and_replace_data', name='data')
+        log_message('debug', 'Starting sort_masks', name='data')
         order, unmasked, unmasked_start, unmasked_end = sort_masks(self)
-        print 'sort masks:', time.time()-start_time
+        log_message('debug', 'Finished sort_masks', name='data')
         return SparseData(self.noise_mean, self.noise_variance,
                           features, self.masks,
                           values_start[order], values_end[order],

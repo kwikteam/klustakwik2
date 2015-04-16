@@ -3,10 +3,10 @@ from itertools import izip
 
 from .data import RawSparseData
 
-__all__ = ['loat_fet_fmask_to_raw']
+__all__ = ['load_fet_fmask_to_raw']
 
 
-def loat_fet_fmask_to_raw(fname, shank):
+def load_fet_fmask_to_raw(fname, shank):
     fet_fname = fname+'.fet.'+str(shank)
     fmask_fname = fname+'.fmask.'+str(shank)
     # read files
