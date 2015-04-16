@@ -27,4 +27,33 @@ print 'Number of unique masks:', data.num_masks
 
 kk = KK(data)
 
-kk.cluster(100)
+if os.path.exists(fname+'.clu.pickle'):
+    print 'Loading clusters from file'
+    clusters = pickle.load(open(fname+'.clu.pickle', 'rb'))
+else:
+    print 'Generating clusters'
+    kk.cluster(100)
+    clusters = kk.clusters
+    pickle.dump(clusters, open(fname+'.clu.pickle', 'wb'), -1)
+
+kk.clusters = clusters
+kk.reindex_clusters()
+
+for cluster in xrange(kk.num_clusters_alive):
+    if cluster % 4 == 0:
+        figure()
+    maskimg = []
+    for spike in kk.get_spikes_in_cluster(cluster):
+        row = zeros(kk.num_features)
+        unmasked = data.unmasked[data.unmasked_start[spike]:data.unmasked_end[spike]]
+        row[unmasked] = data.masks[data.values_start[spike]:data.values_end[spike]]
+        maskimg.append(row)
+    if len(maskimg)==0:
+        continue
+    maskimg = array(maskimg)
+    print maskimg.shape
+    subplot(2, 2, cluster%4 + 1)
+    imshow(maskimg, origin='lower left', aspect='auto', interpolation='nearest')
+    gray()
+    title(cluster)
+show()
