@@ -3,6 +3,7 @@ from pylab import *
 import time
 import cPickle as pickle
 import os
+from random import sample
 
 fname, shank = '../temp/testsmallish', 4
 
@@ -31,24 +32,29 @@ print 'Number of unique masks:', data.num_masks
 
 kk = KK(data)#, iteration_callback=callback)
 
-#if os.path.exists(fname+'.clu.pickle'):
-if False:
+if os.path.exists(fname+'.clu.'+str(shank)):
+# if False:
     print 'Loading clusters from file'
-    clusters = pickle.load(open(fname+'.clu.pickle', 'rb'))
+    clusters = loadtxt(fname+'.clu.'+str(shank), skiprows=1, dtype=int)
 else:
     print 'Generating clusters'
     kk.cluster(100)
     clusters = kk.clusters
-    pickle.dump(clusters, open(fname+'.clu.pickle', 'wb'), -1)
+    savetxt(fname+'.clu.'+str(shank), clusters, '%d', header=str(amax(clusters)), comments='')
 
 kk.clusters = clusters
 kk.reindex_clusters()
+
+num_to_show = 200
 
 for cluster in xrange(kk.num_clusters_alive):
     if cluster % 4 == 0:
         figure()
     maskimg = []
-    for spike in kk.get_spikes_in_cluster(cluster):
+    spikes = kk.get_spikes_in_cluster(cluster)
+    if len(spikes)>num_to_show:
+        spikes = sample(spikes, num_to_show)
+    for spike in spikes:
         row = zeros(kk.num_features)
         unmasked = data.unmasked[data.unmasked_start[spike]:data.unmasked_end[spike]]
         row[unmasked] = data.masks[data.values_start[spike]:data.values_end[spike]]
@@ -56,7 +62,6 @@ for cluster in xrange(kk.num_clusters_alive):
     if len(maskimg)==0:
         continue
     maskimg = array(maskimg)
-    print maskimg.shape
     subplot(2, 2, cluster%4 + 1)
     imshow(maskimg, origin='lower left', aspect='auto', interpolation='nearest')
     gray()
