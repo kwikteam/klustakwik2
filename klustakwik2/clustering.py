@@ -40,28 +40,33 @@ default_parameters = dict(
      )                          
 
 class KK(object):
-    def __init__(self, data, log_prefix=None, **params):        
+    def __init__(self, data, log_prefix='', **params):        
         self.data = data
         self.params = params
         actual_params = default_parameters.copy()
         actual_params.update(**params)
         for k, v in actual_params.iteritems():
             setattr(self, k, v)
-        if log_prefix is None:
-            self.log_prefix = ''
-        else:
-            self.log_prefix = log_prefix+': '
+        self.log_prefix = log_prefix
             
     def log(self, level, msg):
         # todo: would be better to use a logging hierarchy and filter out K2 and K3 in console
-        log_message(level, self.log_prefix+msg)
+        log_message(level, msg, name=self.log_prefix)
             
-    def copy(self, log_prefix='Copy'):
-        return KK(self.data, log_prefix=self.log_prefix+log_prefix, **self.params)
+    def copy(self, log_prefix='kk_copy'):
+        if self.log_prefix:
+            sep = '.'
+        else:
+            sep = ''
+        return KK(self.data, log_prefix=self.log_prefix+sep+log_prefix, **self.params)
         
-    def subset(self, spikes, log_prefix='Subset'):
+    def subset(self, spikes, log_prefix='kk_subset'):
         newdata = self.data.subset(spikes)
-        return KK(newdata, log_prefix=self.log_prefix+log_prefix, **self.params)
+        if self.log_prefix:
+            sep = '.'
+        else:
+            sep = ''
+        return KK(newdata, log_prefix=self.log_prefix+sep+log_prefix, **self.params)
     
     def initialise_clusters(self, clusters):
         self.clusters = clusters
@@ -120,10 +125,9 @@ class KK(object):
             self.reindex_clusters()
     
             QF_id = {True:'F', False:'Q'}[self.full_step]
-            self.log('info', 'Iteration %d%s: %d clusters, %d changed' % (self.current_iteration,
-                                                                          QF_id,
-                                                                          self.num_clusters_alive,
-                                                                          num_changed))
+            self.log('info', 'Iteration %d%s: %d clusters, %d changed, '
+                             'score=%f' % (self.current_iteration, QF_id, self.num_clusters_alive,
+                                           num_changed, score))
 
             # TODO: save current progress
 
@@ -301,7 +305,7 @@ class KK(object):
         penalty = sum(self.cluster_penalty)
         raw = sum(self.log_p_best)
         score = raw+penalty
-        self.log('info', 'Score: raw %f + penalty %f = %f' % (raw, penalty, score))
+        self.log('debug', 'compute_score: raw %f + penalty %f = %f' % (raw, penalty, score))
         return score
 
     @property
@@ -389,7 +393,9 @@ class KK(object):
         did_split = False
         num_clusters = self.num_clusters_alive
         
-        self.log('info', 'Computing score before splitting')
+        self.log('info', 'Trying to split clusters')
+        
+        self.log('debug', 'Computing score before splitting')
         score = self.compute_score()
         
         for cluster in xrange(2, num_clusters):
@@ -401,10 +407,10 @@ class KK(object):
             spikes_in_cluster = self.get_spikes_in_cluster(cluster)
             if len(spikes_in_cluster)==0:
                 continue
-            K2 = self.subset(spikes_in_cluster, log_prefix='Split candidate')
+            K2 = self.subset(spikes_in_cluster, log_prefix='split_candidate')
             # at this point in C++ code we look for an unused cluster, but here we can just
             # use num_clusters+1
-            self.log('info', 'Trying to split cluster %d' % cluster)
+            self.log('debug', 'Trying to split cluster %d' % cluster)
             # initialise with current clusters, do not allow creation of new clusters
             K2.max_possible_clusters = 3
             clusters = full(len(spikes_in_cluster), 2, dtype=int)
@@ -444,7 +450,7 @@ class KK(object):
 #             }
 
             # will splitting improve the score in the whole data set?
-            K3 = self.copy(log_prefix='Split evaluation')
+            K3 = self.copy(log_prefix='split_evaluation')
             K3.prepare_for_CEM()
             clusters = self.clusters.copy()
             I3 = (K2.clusters==3)

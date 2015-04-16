@@ -7,6 +7,7 @@ import os
 fname, shank = '../temp/testsmallish', 4
 
 log_to_file(fname+'.klg', 'debug')
+log_suppress_hierarchy('klustakwik', inclusive=False)
 
 if os.path.exists(fname+'.pickle'):
     start_time = time.time()
