@@ -96,8 +96,7 @@ class SparseData(object):
         self.num_spikes = len(self.values_start)
         self.num_features = len(self.noise_mean)
         
-        self.unique_mask_offsets = hstack((unique(self.unmasked_start), len(self.unmasked)))
-        self.num_masks = len(self.unique_mask_offsets)-1
+        self.num_masks = len(unique(self.unmasked_start))
         
     def subset(self, spikes):
         return SparseData(self.noise_mean, self.noise_variance,

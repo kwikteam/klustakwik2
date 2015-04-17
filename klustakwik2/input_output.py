@@ -58,7 +58,7 @@ def load_fet_fmask_to_raw(fname, shank):
         curoff += len(inds)
         fetsum += fetvals
         fet2sum += fetvals**2
-        nsum += 1        
+        nsum += 1
     offsets[-1] = curoff
     
     nsum[nsum==0] = 1
