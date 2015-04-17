@@ -10,8 +10,8 @@ fname, shank = '../temp/testsmallish', 4
 log_to_file(fname+'.klg', 'debug')
 log_suppress_hierarchy('klustakwik', inclusive=False)
 
-# if os.path.exists(fname+'.pickle'):
-if False:
+if os.path.exists(fname+'.pickle'):
+# if False:
     start_time = time.time()
     data = pickle.load(open(fname+'.pickle', 'rb'))
     print 'load from pickle:', time.time()-start_time
@@ -31,8 +31,8 @@ print 'Number of unique masks:', data.num_masks
 
 kk = KK(data)#, iteration_callback=callback)
 
-if os.path.exists(fname+'.clu.'+str(shank)):
-# if False:
+# if os.path.exists(fname+'.clu.'+str(shank)):
+if False:
     print 'Loading clusters from file'
     clusters = loadtxt(fname+'.clu.'+str(shank), skiprows=1, dtype=int)
 else:

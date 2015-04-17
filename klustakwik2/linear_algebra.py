@@ -22,6 +22,10 @@ class BlockPlusDiagonalMatrix(object):
         self.diagonal = diagonal
     
     def new_with_same_masks(self, block=None, diagonal=None):
+        if block is not None:
+            block = block.copy()
+        if diagonal is not None:
+            diagonal = diagonal.copy()
         return BlockPlusDiagonalMatrix(self.masked, self.unmasked, block=block, diagonal=diagonal)
 
     def cholesky(self):
