@@ -1,14 +1,13 @@
-'''
-'''
-
 from numpy import *
 from klustakwik2 import *
 from numpy.testing import assert_raises, assert_array_almost_equal, assert_array_equal
 from nose import with_setup
+from nose.tools import nottest
 
 from tempfile import mkdtemp
 import os
 
+@nottest
 def generate_simple_test_raw_data():
     # Data as files
     dirname = mkdtemp()
@@ -52,6 +51,12 @@ def generate_simple_test_raw_data():
 
     return (load_fet_fmask_to_raw(os.path.join(dirname, 'kktest'), 1),
             fet, fmask, features, correction_terms)
+
+
+@nottest
+def generate_simple_test_data():
+    data, fet, fmask, features, correction_terms = generate_simple_test_raw_data()
+    return data.to_sparse_data()
 
 
 def test_load_fet_fmask():
