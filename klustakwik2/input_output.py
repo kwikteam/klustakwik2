@@ -2,8 +2,9 @@ from numpy import *
 from itertools import izip
 
 from .data import RawSparseData
+from .logger import log_message
 
-__all__ = ['load_fet_fmask_to_raw']
+__all__ = ['load_fet_fmask_to_raw', 'save_clu', 'SaveCluEvery']
 
 
 def load_fet_fmask_to_raw(fname, shank):
@@ -66,3 +67,36 @@ def load_fet_fmask_to_raw(fname, shank):
     noise_variance = fet2sum/nsum-noise_mean**2
     
     return RawSparseData(noise_mean, noise_variance, all_features, all_fmasks, all_unmasked, offsets)
+
+
+def save_clu(kk, fname, shank):
+    savetxt(fname+'.clu.'+str(shank), kk.clusters, '%d', header=str(amax(kk.clusters)), comments='')
+
+
+class SaveCluEvery(object):
+    '''
+    Callback to save the clu file every fixed number of iterations.
+    
+    fname can be a simple string, or a formattable string that takes the kk object as an argument,
+    so that you can write, e.g. fname='testdata.{kk.name}.{kk.current_iteration}'.
+    
+    every is the number of iterations between saves
+    
+    save_all=True will append .iterN for N the iteration number to the filename, and therefore save
+    each clu file produced.
+    '''
+    def __init__(self, fname, shank, every=50, save_all=False):
+        self.fname = fname
+        self.shank = shank
+        self.every = every
+        self.save_all = save_all
+        
+    def __call__(self, kk):
+        if kk.name=='' and kk.current_iteration % self.every==0:
+            shank = str(self.shank)
+            if self.save_all:
+                shank = str(shank)+'.iter'+str(kk.current_iteration)
+            fname = self.fname.format(kk=kk)
+            log_message('info', 'Saving clu to file '+fname+'.clu.'+shank)
+            save_clu(kk, fname, shank)
+        

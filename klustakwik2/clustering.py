@@ -26,47 +26,58 @@ def get_diagonal(x):
     return x.reshape(-1)[::x.shape[0]+1]
 
 class KK(object):
-    def __init__(self, data, log_prefix='',
-                 iteration_callback=None,
+    def __init__(self, data, callbacks=None, name='',
                  **params):
-        self.log_prefix = log_prefix
-        self.iteration_callback = iteration_callback
+        self.name = name
+        if callbacks is None:
+            callbacks = {}
+        self.callbacks = callbacks
         self.data = data
         self.params = params
         actual_params = default_parameters.copy()
         actual_params.update(**params)
         for k, v in actual_params.iteritems():
             setattr(self, k, v)
-            if log_prefix=='':
+            if name=='':
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
+                
+    def register_callback(self, callback, slot='end_iteration'):
+        if slot not in self.callbacks:
+            self.callbacks[slot] = []
+        self.callbacks[slot].append(callback)
+        
+    def run_callbacks(self, slot):
+        if slot in self.callbacks:
+            for callback in self.callbacks[slot]:
+                callback(self)
             
     def log(self, level, msg, suffix=None):
         if suffix is not None:
-            if self.log_prefix=='':
+            if self.name=='':
                 name = suffix
             else:
-                name = self.log_prefix+'.'+suffix
+                name = self.name+'.'+suffix
         else:
-            name = self.log_prefix
+            name = self.name
         log_message(level, msg, name=name)
             
     def copy(self, log_prefix='kk_copy'):
-        if self.log_prefix:
+        if self.name:
             sep = '.'
         else:
             sep = ''
-        return KK(self.data, log_prefix=self.log_prefix+sep+log_prefix,
-                  iteration_callback=self.iteration_callback,
+        return KK(self.data, log_prefix=self.name+sep+log_prefix,
+                  callbacks=self.callbacks,
                   **self.params)
         
     def subset(self, spikes, log_prefix='kk_subset'):
         newdata = self.data.subset(spikes)
-        if self.log_prefix:
+        if self.name:
             sep = '.'
         else:
             sep = ''
-        return KK(newdata, log_prefix=self.log_prefix+sep+log_prefix,
-                  iteration_callback=self.iteration_callback,
+        return KK(newdata, log_prefix=self.name+sep+log_prefix,
+                  callbacks=self.callbacks,
                   **self.params)
     
     def initialise_clusters(self, clusters):
@@ -141,9 +152,8 @@ class KK(object):
                     (num_changed==0 and last_step_full)):
 #                 if True:
                     did_split = self.try_splits()
-                    
-            if self.iteration_callback is not None:
-                self.iteration_callback(self.log_prefix, self.current_iteration)
+               
+            self.run_callbacks('end_iteration')     
                     
             if num_changed==0 and last_step_full and not did_split:
                 self.log('info', 'No points changed, previous step was full and did not split, '
@@ -195,6 +205,8 @@ class KK(object):
             factor = 1.0/(num_cluster_members[cluster]+self.prior_point-1)
             cov.block *= factor
             cov.diagonal *= factor
+
+        self.run_callbacks('end_m_step')     
                     
     def EC_steps(self, allow_assign_to_noise=True):
         if not allow_assign_to_noise:
@@ -249,6 +261,8 @@ class KK(object):
         # reindex yet because we may reassign points to different clusters and we need the original
         # cluster numbers for that
         self.partition_clusters()
+
+        self.run_callbacks('end_ec_steps')     
     
     def compute_cluster_penalties(self):
         num_cluster_members = self.num_cluster_members
@@ -268,6 +282,8 @@ class KK(object):
                 num_params = sum(num_unmasked*(num_unmasked+1)/2+num_unmasked+1)
                 mean_params = float(num_params)/num_spikes
                 cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(mean_params)/2
+
+        self.run_callbacks('end_compute_cluster_penalties')     
     
     def consider_deletion(self):
         num_cluster_members = self.num_cluster_members
@@ -305,12 +321,16 @@ class KK(object):
         # we've also invalidated the second best log_p and clusters
         self.log_p_second_best = None
         self.clusters_second_best = None
+
+        self.run_callbacks('end_consider_deletion')
+
             
     def compute_score(self):
         penalty = sum(self.cluster_penalty)
         raw = sum(self.log_p_best)
         score = raw+penalty
         self.log('debug', 'compute_score: raw %f + penalty %f = %f' % (raw, penalty, score))
+        self.run_callbacks('end_compute_score')
         return score
 
     @property
@@ -393,8 +413,10 @@ class KK(object):
             self.cluster_masked_features.append(masked)
             self.cluster_unmasked_features.append(unmasked)
             self.covariance.append(BlockPlusDiagonalMatrix(masked, unmasked))
+        self.run_callbacks('end_compute_cluster_masks')
             
     def try_splits(self):
+        self.run_callbacks('start_try_splits')
         did_split = False
         num_clusters = self.num_clusters_alive
         
@@ -473,4 +495,5 @@ class KK(object):
             else:
                 pass
             
+        self.run_callbacks('end_try_splits')
         return did_split
