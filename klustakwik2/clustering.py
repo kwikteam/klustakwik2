@@ -179,7 +179,7 @@ class KK(object):
         # that to a sparse structure later
         self.cluster_mean = compute_cluster_means(self)
         
-        # TODO: compute cov matrix for cluster 1!
+        # TODO: compute cov matrix for cluster 1! (at the moment nothing gets assigned to this cluster)
         
         # Compute covariance matrices
         for cluster in xrange(2, num_clusters):

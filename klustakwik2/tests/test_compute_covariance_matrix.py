@@ -4,6 +4,7 @@ from numpy.testing import assert_raises, assert_array_almost_equal, assert_array
 from nose import with_setup
 from nose.tools import nottest
 from numpy.random import randint, rand
+from copy import deepcopy
 
 # we use the version that is used in klustakwik2 rather than separately testing the numba/cython
 # versions
@@ -22,6 +23,8 @@ def test_compute_covariance_matrix():
     kk.compute_cluster_masks()
     kk.cluster_mean = compute_cluster_means(kk)
 
+    cov_matrices = []
+
     for cluster in xrange(2, num_clusters):
         compute_covariance_matrix(kk, cluster)
         cov = kk.covariance[cluster]
@@ -35,6 +38,9 @@ def test_compute_covariance_matrix():
             for i in xrange(len(unmasked)):
                 block[i, i] += ct[spike, unmasked[i]]
         assert_array_almost_equal(block, cov.block)
+        cov_matrices.append(deepcopy(cov))
+        
+    return cov_matrices
 
 
 if __name__=='__main__':
