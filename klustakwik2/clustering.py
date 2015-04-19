@@ -25,6 +25,18 @@ def get_diagonal(x):
     '''
     return x.reshape(-1)[::x.shape[0]+1]
 
+
+def add_slots(meth):
+    def new_meth(self, *args, **kwds):
+        self.run_callbacks('start_'+meth.__name__)
+        res = meth(self, *args, **kwds)
+        self.run_callbacks('end_'+meth.__name__)
+        return res
+    new_meth.__name__ = meth.__name__
+    new_meth.__doc__ = meth.__doc__
+    return new_meth
+
+        
 class KK(object):
     def __init__(self, data, callbacks=None, name='',
                  **params):
@@ -40,7 +52,7 @@ class KK(object):
             setattr(self, k, v)
             if name=='':
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
-                
+
     def register_callback(self, callback, slot='end_iteration'):
         if slot not in self.callbacks:
             self.callbacks[slot] = []
@@ -164,7 +176,8 @@ class KK(object):
             self.log('info', 'Number of iterations exceeded maximum %d' % self.max_iterations)
             
         return score
-    
+
+    @add_slots    
     def M_step(self):
         # eliminate any clusters with 0 members, compute the list of spikes
         # in each cluster, compute the cluster masks and allocate space for
@@ -205,9 +218,8 @@ class KK(object):
             factor = 1.0/(num_cluster_members[cluster]+self.prior_point-1)
             cov.block *= factor
             cov.diagonal *= factor
-
-        self.run_callbacks('end_m_step')     
                     
+    @add_slots    
     def EC_steps(self, allow_assign_to_noise=True):
         if not allow_assign_to_noise:
             cluster_start = 2
@@ -261,9 +273,8 @@ class KK(object):
         # reindex yet because we may reassign points to different clusters and we need the original
         # cluster numbers for that
         self.partition_clusters()
-
-        self.run_callbacks('end_ec_steps')     
     
+    @add_slots    
     def compute_cluster_penalties(self):
         num_cluster_members = self.num_cluster_members
         num_clusters = self.num_clusters_alive
@@ -282,9 +293,8 @@ class KK(object):
                 num_params = sum(num_unmasked*(num_unmasked+1)/2+num_unmasked+1)
                 mean_params = float(num_params)/num_spikes
                 cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(mean_params)/2
-
-        self.run_callbacks('end_compute_cluster_penalties')     
     
+    @add_slots    
     def consider_deletion(self):
         num_cluster_members = self.num_cluster_members
         num_clusters = self.num_clusters_alive
@@ -322,9 +332,7 @@ class KK(object):
         self.log_p_second_best = None
         self.clusters_second_best = None
 
-        self.run_callbacks('end_consider_deletion')
-
-            
+    @add_slots    
     def compute_score(self):
         penalty = sum(self.cluster_penalty)
         raw = sum(self.log_p_best)
@@ -385,6 +393,7 @@ class KK(object):
         sico = self.spikes_in_cluster_offset
         return sic[sico[cluster]:sico[cluster+1]]
         
+    @add_slots    
     def compute_cluster_masks(self):
         '''
         Computes the masked and unmasked indices for each cluster based on the
@@ -413,10 +422,9 @@ class KK(object):
             self.cluster_masked_features.append(masked)
             self.cluster_unmasked_features.append(unmasked)
             self.covariance.append(BlockPlusDiagonalMatrix(masked, unmasked))
-        self.run_callbacks('end_compute_cluster_masks')
             
+    @add_slots    
     def try_splits(self):
-        self.run_callbacks('start_try_splits')
         did_split = False
         num_clusters = self.num_clusters_alive
         
@@ -495,5 +503,4 @@ class KK(object):
             else:
                 pass
             
-        self.run_callbacks('end_try_splits')
         return did_split
