@@ -7,6 +7,7 @@ from .logger import log_message
 
 from .mask_starts import mask_starts
 from .linear_algebra import BlockPlusDiagonalMatrix
+from .default_parameters import default_parameters
 
 from .cylib.compute_cluster_masks import accumulate_cluster_mask_sum
 # from .cylib.m_step import compute_cluster_means, compute_covariance_matrix
@@ -23,22 +24,6 @@ def get_diagonal(x):
     Return a writeable view of the diagonal of x
     '''
     return x.reshape(-1)[::x.shape[0]+1]
-
-default_parameters = dict(
-     prior_point=1,
-     mua_point=1,
-     noise_point=1,
-     points_for_cluster_mask=10,
-     penalty_k=0.0,
-     penalty_k_log_n=1.0,
-     max_iterations=1000,
-     num_changed_threshold=0.05,
-     full_step_every=20,
-     split_first=20,
-     split_every=40,
-     max_possible_clusters=1000,
-     mask_starts=500,
-     )                          
 
 class KK(object):
     def __init__(self, data, log_prefix='',
@@ -192,8 +177,9 @@ class KK(object):
         # Compute means for each cluster
         # Note that we do this densely at the moment, might want to switch
         # that to a sparse structure later
-        compute_cluster_means(self)
         self.cluster_mean = compute_cluster_means(self)
+        
+        # TODO: compute cov matrix for cluster 1!
         
         # Compute covariance matrices
         for cluster in xrange(2, num_clusters):

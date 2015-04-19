@@ -88,7 +88,7 @@ def compute_covariance_matrix(kk, cluster):
     f2m = numpy.zeros(num_features)
     ct = numpy.zeros(num_features)
     
-    do_var_accum(spike_indices, kk.data.noise_mean, cov.unmasked, block,
+    do_var_accum(spike_indices, kk.cluster_mean[cluster, :], cov.unmasked, block,
                  unmasked, ustart, uend, features, vstart, vend,
                  f2m, ct, data.correction_terms, num_features,
                  )
@@ -96,7 +96,7 @@ def compute_covariance_matrix(kk, cluster):
 
 def do_var_accum(
             numpy.ndarray[int, ndim=1] spike_indices,
-            numpy.ndarray[double, ndim=1] noise_mean,
+            numpy.ndarray[double, ndim=1] cluster_mean,
             numpy.ndarray[int, ndim=1] cov_unmasked,
             numpy.ndarray[double, ndim=2] block,
             numpy.ndarray[int, ndim=1] unmasked,
@@ -122,7 +122,7 @@ def do_var_accum(
         for i in range(num_unmasked):
             j = unmasked[ustart[p]+i]
             k = vstart[p]+i
-            f2m[j] = features[k]-noise_mean[j]
+            f2m[j] = features[k]-cluster_mean[j]
             
         num_unmasked = len(cov_unmasked)
         for i in range(num_unmasked):

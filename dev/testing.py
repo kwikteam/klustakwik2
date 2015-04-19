@@ -29,7 +29,7 @@ print 'Number of unique masks:', data.num_masks
 #     if name=='':
 #         print 'Finished iteration', iter
 
-kk = KK(data)#, iteration_callback=callback)
+kk = KK(data, max_iterations=100)#, iteration_callback=callback)
 
 # if os.path.exists(fname+'.clu.'+str(shank)):
 if False:
