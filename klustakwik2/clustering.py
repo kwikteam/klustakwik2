@@ -47,7 +47,10 @@ class KK(object):
         self.data = data
         self.params = params
         actual_params = default_parameters.copy()
-        actual_params.update(**params)
+        for k, v in params.iteritems():
+            if k not in default_parameters:
+                raise ValueError("There is no parameter "+k)
+            actual_params[k] = v
         for k, v in actual_params.iteritems():
             setattr(self, k, v)
             if name=='':
@@ -73,22 +76,22 @@ class KK(object):
             name = self.name
         log_message(level, msg, name=name)
             
-    def copy(self, log_prefix='kk_copy'):
+    def copy(self, name='kk_copy'):
         if self.name:
             sep = '.'
         else:
             sep = ''
-        return KK(self.data, log_prefix=self.name+sep+log_prefix,
+        return KK(self.data, name=self.name+sep+name,
                   callbacks=self.callbacks,
                   **self.params)
         
-    def subset(self, spikes, log_prefix='kk_subset'):
+    def subset(self, spikes, name='kk_subset'):
         newdata = self.data.subset(spikes)
         if self.name:
             sep = '.'
         else:
             sep = ''
-        return KK(newdata, log_prefix=self.name+sep+log_prefix,
+        return KK(newdata, name=self.name+sep+name,
                   callbacks=self.callbacks,
                   **self.params)
     
@@ -442,7 +445,7 @@ class KK(object):
             spikes_in_cluster = self.get_spikes_in_cluster(cluster)
             if len(spikes_in_cluster)==0:
                 continue
-            K2 = self.subset(spikes_in_cluster, log_prefix='split_candidate')
+            K2 = self.subset(spikes_in_cluster, name='split_candidate')
             # at this point in C++ code we look for an unused cluster, but here we can just
             # use num_clusters+1
             self.log('debug', 'Trying to split cluster %d' % cluster)
@@ -485,7 +488,7 @@ class KK(object):
 #             }
 
             # will splitting improve the score in the whole data set?
-            K3 = self.copy(log_prefix='split_evaluation')
+            K3 = self.copy(name='split_evaluation')
             K3.prepare_for_CEM()
             clusters = self.clusters.copy()
             I3 = (K2.clusters==3)
