@@ -1,5 +1,7 @@
 '''
 Tools for monitoring KK as it runs
+
+MonitoringServer and MonitoringClient are lightly adapted from Brian (briansimulator.org).
 '''
 
 try:

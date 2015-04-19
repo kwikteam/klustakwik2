@@ -27,7 +27,7 @@ if __name__=='__main__':
     print 'Number of spikes:', data.num_spikes
     print 'Number of unique masks:', data.num_masks
     
-    kk = KK(data, max_iterations=1000)
+    kk = KK(data, max_iterations=10)
     kk.register_callback(SaveCluEvery(fname, shank, every=10))
     kk.register_callback(MonitoringServer())
     
