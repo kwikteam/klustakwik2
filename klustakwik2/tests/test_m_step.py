@@ -29,14 +29,20 @@ def test_m_step():
     cov_matrices = test_compute_covariance_matrix()
     
     for cluster, cov in enumerate(cov_matrices):
-        cluster += 2
+        cluster += 1
         cov.block
+        
+        if cluster==1:
+            point = kk.mua_point
+        else:
+            point = kk.prior_point
 
         for i, j in enumerate(cov.unmasked):
-            cov.block[i, i] += kk.prior_point*kk.data.noise_variance[j]
+            cov.block[i, i] += point*kk.data.noise_variance[j]
         for i, j in enumerate(cov.masked):
-            cov.diagonal[i] += kk.prior_point*kk.data.noise_variance[j]        
-        factor = 1.0/(num_cluster_members[cluster]+kk.prior_point-1)
+            cov.diagonal[i] += point*kk.data.noise_variance[j]
+            
+        factor = 1.0/(num_cluster_members[cluster]+point-1)
         cov.block *= factor
         cov.diagonal *= factor
         

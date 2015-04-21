@@ -25,7 +25,7 @@ def test_compute_covariance_matrix():
 
     cov_matrices = []
 
-    for cluster in xrange(2, num_clusters):
+    for cluster in xrange(1, num_clusters):
         compute_covariance_matrix(kk, cluster)
         cov = kk.covariance[cluster]
         f2m = kk.orig_features-kk.cluster_mean[cluster, :][newaxis, :]
@@ -34,7 +34,11 @@ def test_compute_covariance_matrix():
         block = zeros_like(cov.block)
         unmasked = cov.unmasked
         for spike in spikes:
-            block[:, :] += f2m[spike, unmasked][:, newaxis]*f2m[spike, unmasked][newaxis, :]
+            if cluster==1:
+                for i in xrange(len(unmasked)):
+                    block[i, i] += f2m[spike, unmasked[i]]**2
+            else:
+                block[:, :] += f2m[spike, unmasked][:, newaxis]*f2m[spike, unmasked][newaxis, :]
             for i in xrange(len(unmasked)):
                 block[i, i] += ct[spike, unmasked[i]]
         assert_array_almost_equal(block, cov.block)
