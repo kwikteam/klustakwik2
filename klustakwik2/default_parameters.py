@@ -4,7 +4,7 @@ Default clustering parameters
 
 default_parameters = dict(
      prior_point=1,
-     mua_point=1,
+     mua_point=2,
      noise_point=1,
      points_for_cluster_mask=10,
      penalty_k=0.0,

@@ -205,20 +205,22 @@ class KK(object):
         # that to a sparse structure later
         self.cluster_mean = compute_cluster_means(self)
         
-        # TODO: compute cov matrix for cluster 1! (at the moment nothing gets assigned to this cluster)
-        
         # Compute covariance matrices
-        for cluster in xrange(2, num_clusters):
+        for cluster in xrange(1, num_clusters):
+            if cluster==1:
+                point = self.mua_point
+            else:
+                point = self.prior_point
             compute_covariance_matrix(self, cluster)
             cov = self.covariance[cluster]
             block_diagonal = get_diagonal(cov.block)
             
             # Add prior
-            block_diagonal[:] += self.prior_point*self.data.noise_variance[cov.unmasked]
-            cov.diagonal[:] += self.prior_point*self.data.noise_variance[cov.masked]
+            block_diagonal[:] += point*self.data.noise_variance[cov.unmasked]
+            cov.diagonal[:] += point*self.data.noise_variance[cov.masked]
             
             # Normalise
-            factor = 1.0/(num_cluster_members[cluster]+self.prior_point-1)
+            factor = 1.0/(num_cluster_members[cluster]+point-1)
             cov.block *= factor
             cov.diagonal *= factor
                     

@@ -27,18 +27,19 @@ if __name__=='__main__':
     print 'Number of spikes:', data.num_spikes
     print 'Number of unique masks:', data.num_masks
     
-    kk = KK(data, max_iterations=10)
+    kk = KK(data, max_iterations=1000)
     kk.register_callback(SaveCluEvery(fname, shank, every=10))
     kk.register_callback(MonitoringServer())
     
-    # if os.path.exists(fname+'.clu.'+str(shank)):
-    if False:
+    if os.path.exists(fname+'.clu.'+str(shank)):
+    #if False:
         print 'Loading clusters from file'
-        kk.clusters = loadtxt(fname+'.clu.'+str(shank), skiprows=1, dtype=int)
+        clusters = loadtxt(fname+'.clu.'+str(shank), skiprows=1, dtype=int)
+        kk.cluster_from(clusters)
     else:
-        print 'Generating clusters'
+        print 'Generating clusters from scratch'
         kk.cluster(100)
-        save_clu(kk, fname, shank)
+    save_clu(kk, fname, shank)
     
     clusters = kk.clusters
     kk.reindex_clusters()

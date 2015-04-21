@@ -88,10 +88,16 @@ def compute_covariance_matrix(kk, cluster):
     f2m = numpy.zeros(num_features)
     ct = numpy.zeros(num_features)
     
-    do_var_accum(spike_indices, kk.cluster_mean[cluster, :], cov.unmasked, block,
-                 unmasked, ustart, uend, features, vstart, vend,
-                 f2m, ct, data.correction_terms, num_features,
-                 )
+    if cluster==1:
+        do_var_accum_mua(spike_indices, kk.cluster_mean[cluster, :], cov.unmasked, block,
+                         unmasked, ustart, uend, features, vstart, vend,
+                         f2m, ct, data.correction_terms, num_features,
+                         )
+    else:
+        do_var_accum(spike_indices, kk.cluster_mean[cluster, :], cov.unmasked, block,
+                     unmasked, ustart, uend, features, vstart, vend,
+                     f2m, ct, data.correction_terms, num_features,
+                     )
     
 
 def do_var_accum(
@@ -128,6 +134,50 @@ def do_var_accum(
         for i in range(num_unmasked):
             for j in range(num_unmasked):
                 block[i, j] += f2m[cov_unmasked[i]]*f2m[cov_unmasked[j]]
+        
+        for i in range(num_features):
+            ct[i] = 0
+        num_unmasked = uend[p]-ustart[p]
+        for i in range(num_unmasked):
+            ct[unmasked[ustart[p]+i]] = correction_term[vstart[p]+i]
+        
+        num_unmasked = len(cov_unmasked)
+        for i in range(num_unmasked):
+            block[i, i] += ct[cov_unmasked[i]]
+
+def do_var_accum_mua(
+            numpy.ndarray[int, ndim=1] spike_indices,
+            numpy.ndarray[double, ndim=1] cluster_mean,
+            numpy.ndarray[int, ndim=1] cov_unmasked,
+            numpy.ndarray[double, ndim=2] block,
+            numpy.ndarray[int, ndim=1] unmasked,
+            numpy.ndarray[int, ndim=1] ustart,
+            numpy.ndarray[int, ndim=1] uend,
+            numpy.ndarray[double, ndim=1] features,
+            numpy.ndarray[int, ndim=1] vstart,
+            numpy.ndarray[int, ndim=1] vend,
+            numpy.ndarray[double, ndim=1] f2m,
+            numpy.ndarray[double, ndim=1] ct,
+            numpy.ndarray[double, ndim=1] correction_term,
+            int num_features,
+            ):
+    cdef int i, j, k, ip
+    cdef int num_unmasked
+    cdef int p
+    cdef int num_spikes = len(spike_indices)
+    for ii in range(num_spikes):
+        p = spike_indices[ii]
+        for i in range(num_features):
+            f2m[i] = 0
+        num_unmasked = uend[p]-ustart[p]
+        for i in range(num_unmasked):
+            j = unmasked[ustart[p]+i]
+            k = vstart[p]+i
+            f2m[j] = features[k]-cluster_mean[j]
+            
+        num_unmasked = len(cov_unmasked)
+        for i in range(num_unmasked):
+            block[i, i] += f2m[cov_unmasked[i]]*f2m[cov_unmasked[i]]
         
         for i in range(num_features):
             ct[i] = 0
