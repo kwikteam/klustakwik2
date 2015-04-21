@@ -29,9 +29,7 @@ def test_m_step():
     cov_matrices = test_compute_covariance_matrix()
     
     for cluster, cov in enumerate(cov_matrices):
-        cluster += 1
-        cov.block
-        
+        cluster += 1        
         if cluster==1:
             point = kk.mua_point
         else:
