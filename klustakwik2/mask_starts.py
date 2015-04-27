@@ -33,6 +33,7 @@ def mask_starts(data, num_clusters):
     allspikes = arange(data.num_spikes)
     shuffle(allspikes)
     
+    # TODO: optimise this in Cython or Numba
     for p in allspikes:
         unmasked = data.unmasked[data.unmasked_start[p]:data.unmasked_end[p]]
         mask_id = data.unmasked_start[p]

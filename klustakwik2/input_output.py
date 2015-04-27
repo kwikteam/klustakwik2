@@ -52,14 +52,15 @@ def load_fet_fmask_to_raw(fname, shank):
         fetvals = (fromstring(fetline, dtype=float, sep=' ')-vmin)/vdiff
         fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')
         inds, = (fmaskvals>0).nonzero()
+        masked_inds, = (fmaskvals==0).nonzero()
         all_features[curoff:curoff+len(inds)] = fetvals[inds]
         all_fmasks[curoff:curoff+len(inds)] = fmaskvals[inds]
         all_unmasked[curoff:curoff+len(inds)] = inds
         offsets[i] = curoff
         curoff += len(inds)
-        fetsum += fetvals
-        fet2sum += fetvals**2
-        nsum += 1
+        fetsum[masked_inds] += fetvals[masked_inds]
+        fet2sum[masked_inds] += fetvals[masked_inds]**2
+        nsum[masked_inds] += 1
     offsets[-1] = curoff
     
     nsum[nsum==0] = 1

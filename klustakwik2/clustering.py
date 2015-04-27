@@ -163,7 +163,7 @@ class KK(object):
             if recurse and self.split_every>0:
                 if (self.current_iteration==self.split_first or
                     (self.current_iteration>self.split_first and
-                     self.current_iteration-self.split_first%self.split_every==self.split_every-1) or
+                     (self.current_iteration-self.split_first)%self.split_every==self.split_every-1) or
                     (num_changed==0 and last_step_full)):
 #                 if True:
                     did_split = self.try_splits()
