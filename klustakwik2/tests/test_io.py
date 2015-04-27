@@ -39,11 +39,14 @@ def generate_simple_test_raw_data():
     # Normalisation to [0, 1]
     fet = (fet-amin(fet, axis=0))/(amax(fet, axis=0)-amin(fet, axis=0))
 
+    nanmasked_fet = fet.copy()
+    nanmasked_fet[fmask>0] = nan
+
     # Correct computation of the corrected data and correction term
     x = fet
     w = fmask
-    nu = mean(fet, axis=0)[newaxis, :]
-    sigma2 = var(fet, axis=0)[newaxis, :]
+    nu = nanmean(nanmasked_fet, axis=0)[newaxis, :]
+    sigma2 = nanvar(nanmasked_fet, axis=0)[newaxis, :]
     y = w*x+(1-w)*nu
     z = w*x*x+(1-w)*(nu*nu+sigma2)
     correction_terms = z-y*y
@@ -65,8 +68,10 @@ def test_load_fet_fmask():
     data, fet, fmask, features, correction_terms = generate_simple_test_raw_data()
     raw_data = data
     
-    assert_array_almost_equal(data.noise_mean, mean(fet, axis=0))
-    assert_array_almost_equal(data.noise_variance, var(fet, axis=0))
+    nanmasked_fet = fet.copy()
+    nanmasked_fet[fmask>0] = nan
+    assert_array_almost_equal(data.noise_mean, nanmean(nanmasked_fet, axis=0))
+    assert_array_almost_equal(data.noise_variance, nanvar(nanmasked_fet, axis=0))
     assert amin(data.features)==0
     assert amax(data.features)==1
     assert len(data.offsets)==5

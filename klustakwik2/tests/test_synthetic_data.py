@@ -85,9 +85,6 @@ def test_synthetic_easy():
     print data.noise_variance
     print bincount(kk.clusters[:100])
     print bincount(kk.clusters[100:])
-    from pylab import *
-    hist(data.features)
-    show()
     # todo: what to make of this?
 
 if __name__=='__main__':
