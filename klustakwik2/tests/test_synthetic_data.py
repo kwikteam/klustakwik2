@@ -74,20 +74,25 @@ def test_synthetic_trivial():
     assert amin(kk.clusters)==2
 
 
-def test_synthetic_easy():
+def test_synthetic_trivial2():
+    '''
+    In this test, there is a small amount of variance in both the masks and the features.
+    Note that if you put the average mask at 1 instead of 0.5 it fails because the 'corrected'
+    data will be non-Gaussian (as it gets clipped between 0 and 1). Similarly, if you put the noise
+    in the data as 0 it doesn't work because you get singular matrices.
+    '''
     data = generate_synthetic_data(2, 100, [
-        ((1, 0), (0.0,)*2, (1, 0), (0.01, 0.0)),
-        ((0, 1), (0.0,)*2, (0, 1), (0.0, 0.01)),
+        ((1, 0), (0.01,)*2, (0.5, 0), (0.01, 0.0)),
+        ((0, 1), (0.01,)*2, (0, 0.5), (0.0, 0.01)),
         ])
     kk = KK(data)
     kk.cluster(10)
-    print data.noise_mean
-    print data.noise_variance
-    print bincount(kk.clusters[:100])
-    print bincount(kk.clusters[100:])
-    # todo: what to make of this?
+    assert len(unique(kk.clusters[:100]))==1
+    assert len(unique(kk.clusters[100:]))==1
+    assert len(unique(kk.clusters))==2
+    assert amin(kk.clusters)==2
 
 if __name__=='__main__':
     console_log_level('debug')
-#     test_synthetic_trivial()
-    test_synthetic_easy()
+    test_synthetic_trivial()
+    test_synthetic_trivial2()
