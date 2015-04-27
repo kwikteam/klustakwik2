@@ -14,7 +14,8 @@ def mask_difference(A, B, n):
 
 
 def mask_starts(data, num_clusters):
-    log_message('info', 'Using mask starts with %d clusters' % num_clusters)
+    log_message('info', 'Using mask starts with %d clusters, data has '
+                        '%d unique masks' % (num_clusters, data.num_masks))
     if num_clusters<=2:
         raise ValueError("Number of starting clusters must be at least 3 to accomodate noise and mua clusters.")
     num_clusters -= 2 # noise and mua clusters are not generated, we add 2 at the end

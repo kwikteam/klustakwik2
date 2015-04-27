@@ -303,6 +303,9 @@ class KK(object):
     def consider_deletion(self):
         num_cluster_members = self.num_cluster_members
         num_clusters = self.num_clusters_alive
+        if num_clusters<3:
+            self.log('info', 'Not enough clusters to try deletion')
+            return
         sic = self.spikes_in_cluster
         sico = self.spikes_in_cluster_offset
         log_p_best = self.log_p_best
@@ -380,10 +383,14 @@ class KK(object):
         self.partition_clusters()
         
     def partition_clusters(self):
-        self.num_cluster_members = num_cluster_members = array(bincount(self.clusters), dtype=int)
+        self.num_cluster_members = num_cluster_members = array(bincount(self.clusters, minlength=2),
+                                                               dtype=int)
         I = array(argsort(self.clusters), dtype=int)
         y = self.clusters[I]
-        n = amax(y)+2
+        n = amax(y)
+        if n<1:
+            n = 1
+        n += 2
         J = searchsorted(y, arange(n))
         self.spikes_in_cluster = I
         self.spikes_in_cluster_offset = J

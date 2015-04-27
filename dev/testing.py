@@ -4,6 +4,7 @@ import time
 import cPickle as pickle
 import os
 from random import sample
+import shutil
 
 if __name__=='__main__':
     
@@ -31,6 +32,19 @@ if __name__=='__main__':
     kk.register_callback(SaveCluEvery(fname, shank, every=10))
     kk.register_callback(MonitoringServer())
     
+    def printclu_before(kk):
+        global clu_here
+        clu_here = kk.clusters.copy()
+    def printclu_after(kk):
+        changed = (kk.clusters!=clu_here).nonzero()[0]
+        print 'Changed:', changed
+        print kk.old_clusters[changed]
+        print kk.clusters[changed]
+    kk.register_callback(printclu_before, 'start_EC_steps')
+    kk.register_callback(printclu_after, 'end_EC_steps')
+    
+    if os.path.exists(fname+'.clu.'+str(shank)+'.flipflop'):
+        shutil.copy(fname+'.clu.'+str(shank)+'.flipflop', fname+'.clu.'+str(shank))
     if os.path.exists(fname+'.clu.'+str(shank)):
     #if False:
         print 'Loading clusters from file'
