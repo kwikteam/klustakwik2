@@ -55,7 +55,7 @@ def generate_synthetic_data(num_features, spikes_per_centre, centres):
                          fet, fmask, unmasked, offsets).to_sparse_data()
     
 
-def test_synthetic_trivial():
+def test_synthetic_2d_trivial():
     '''
     This is the most trivial clustering problem, two well separated clusters in 2D with almost
     no noise and perfect starting masks. All the algorithm has to do is not do anything. We
@@ -74,7 +74,7 @@ def test_synthetic_trivial():
     assert amin(kk.clusters)==2
 
 
-def test_synthetic_trivial2():
+def test_synthetic_2d_easy():
     '''
     In this test, there is a small amount of variance in both the masks and the features.
     Note that if you put the average mask at 1 instead of 0.5 it fails because the 'corrected'
@@ -92,7 +92,67 @@ def test_synthetic_trivial2():
     assert len(unique(kk.clusters))==2
     assert amin(kk.clusters)==2
 
+
+def test_synthetic_4d_easy():
+    data = generate_synthetic_data(4, 1000, [
+        ((1, 1, 0, 0), (0.1,)*4, (1.5, 0.5, 0, 0), (0.05, 0.05, 0, 0)),
+        ((0, 1, 1, 0), (0.1,)*4, (0, 0.5, 1.5, 0), (0, 0.05, 0.05, 0)),
+        ((0, 0, 1, 1), (0.1,)*4, (0, 0, 0.5, 1.5), (0, 0, 0.05, 0.05)),
+        ((1, 0, 0, 1), (0.1,)*4, (1.5, 0, 0, 1.5), (0.05, 0, 0, 0.05)),
+        ])
+    kk = KK(data)
+    kk.cluster(20)
+    assert len(unique(kk.clusters[0:1000]))==1
+    assert len(unique(kk.clusters[1000:2000]))==1
+    assert len(unique(kk.clusters[2000:3000]))==1
+    assert len(unique(kk.clusters[3000:4000]))==1
+    assert len(unique(kk.clusters))==4
+    assert amin(kk.clusters)==2
+
+
+def test_synthetic_4d_trivial():
+    data = generate_synthetic_data(4, 1000, [
+        ((1, 1, 0, 0), (0.1,)*4, (1.5, 0.5, 0, 0), (0,)*4),
+        ((0, 1, 1, 0), (0.1,)*4, (0, 0.5, 1.5, 0), (0,)*4),
+        ((0, 0, 1, 1), (0.1,)*4, (0, 0, 0.5, 1.5), (0,)*4),
+        ((1, 0, 0, 1), (0.1,)*4, (1.5, 0, 0, 1.5), (0,)*4),
+        ])
+    kk = KK(data)
+    kk.cluster(20)
+    assert len(unique(kk.clusters[0:1000]))==1
+    assert len(unique(kk.clusters[1000:2000]))==1
+    assert len(unique(kk.clusters[2000:3000]))==1
+    assert len(unique(kk.clusters[3000:4000]))==1
+    assert len(unique(kk.clusters))==4
+    assert amin(kk.clusters)==2
+
+
+# This test is failed presumably because of non-Gaussianity after corrections?
+def test_synthetic_4d_easy_non_gaussian():
+    data = generate_synthetic_data(4, 1000, [
+        ((1, 1, 0, 0), (0.1,)*4, (1.5, 0.5, 0, 0), (0.05, 0.05, 0.01, 0)),
+        ((0, 1, 1, 0), (0.1,)*4, (0, 0.5, 1.5, 0), (0, 0.05, 0.05, 0.01)),
+        ((0, 0, 1, 1), (0.1,)*4, (0, 0, 0.5, 1.5), (0.01, 0, 0.05, 0.05)),
+        ((1, 0, 0, 1), (0.1,)*4, (1.5, 0, 0, 1.5), (0.05, 0, 0.01, 0.05)),
+        ])
+    kk = KK(data)
+    kk.cluster(20)
+    print bincount(kk.clusters[0:1000])
+    print bincount(kk.clusters[1000:2000])
+    print bincount(kk.clusters[2000:3000])
+    print bincount(kk.clusters[3000:4000])
+    assert len(unique(kk.clusters[0:1000]))==1
+    assert len(unique(kk.clusters[1000:2000]))==1
+    assert len(unique(kk.clusters[2000:3000]))==1
+    assert len(unique(kk.clusters[3000:4000]))==1
+    assert len(unique(kk.clusters))==4
+    assert amin(kk.clusters)==2
+
+
 if __name__=='__main__':
-    console_log_level('debug')
-    test_synthetic_trivial()
-    test_synthetic_trivial2()
+#     console_log_level('debug')
+    test_synthetic_2d_trivial()
+    test_synthetic_2d_easy()
+    test_synthetic_4d_easy()
+    test_synthetic_4d_trivial()
+    test_synthetic_4d_easy_non_gaussian()
