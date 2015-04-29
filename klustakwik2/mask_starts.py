@@ -23,7 +23,7 @@ def mask_starts(data, num_clusters):
         log_message('warning', ('Not enough masks (%d) for specified number of starting '
                                 'clusters (%d)') % (data.num_masks, num_clusters+2))
         num_clusters = data.num_masks
-        
+         
     return mask_start_clusters(data, num_clusters)+2
 
 
@@ -42,11 +42,11 @@ def mask_starts(data, num_clusters):
 #     end = dict()
 #     cur_cluster = 0
 #     num_features = data.num_features
-#     
+#      
 #     # go through the spikes in random order so as not to bias the selection of masks
 #     allspikes = arange(data.num_spikes)
 #     shuffle(allspikes)
-#     
+#      
 #     # TODO: optimise this in Cython or Numba
 #     for p in allspikes:
 #         unmasked = data.unmasked[data.unmasked_start[p]:data.unmasked_end[p]]

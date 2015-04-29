@@ -8,7 +8,8 @@ import shutil
 
 if __name__=='__main__':
     
-    fname, shank = '../temp/testsmallish', 4
+    #fname, shank = '../temp/testsmallish', 4
+    fname, shank = '../temp/20141009_all_AdjGraph', 1
     
     log_to_file(fname+'.klg', 'debug')
     log_suppress_hierarchy('klustakwik', inclusive=False)

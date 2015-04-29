@@ -136,10 +136,11 @@ cpdef do_mask_starts(integral[:] clusters,
     cdef vector[integral] candidate_ids
     cdef vector[integral] candidate_ends
     cdef integral cur_cluster = 0
-    cdef integral p, mask_id, best_distance, candidate_id, candidate_end, c_idx, d
+    cdef integral p, mask_id, best_distance, candidate_id, candidate_end, c_idx, d, p_idx
     found = dict()
     end = dict()
-    for p in allspikes:
+    for p_idx in range(len(allspikes)):
+        p = allspikes[p_idx]
         mask_id = ustart[p]
         if mask_id in found:
             # we've already used this mask
