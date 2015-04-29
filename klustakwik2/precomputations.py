@@ -5,7 +5,6 @@ __all__ = ['compute_correction_terms_and_replace_data',
            ]
 
 def compute_correction_terms_and_replace_data(raw_data):
-    # TODO: more efficient version of this function (numeval? numba?)
     I = raw_data.unmasked
     x = raw_data.features
     w = raw_data.masks
@@ -19,7 +18,6 @@ def compute_correction_terms_and_replace_data(raw_data):
 
 
 def sort_masks(raw_data):
-    # TODO: more efficient version of this function?
     # step 1: sort into lexicographical order of masks
     O = raw_data.offsets
     I = raw_data.unmasked
