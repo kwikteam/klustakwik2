@@ -9,21 +9,12 @@ from .mask_starts import mask_starts
 from .linear_algebra import BlockPlusDiagonalMatrix
 from .default_parameters import default_parameters
 
-from .cylib.compute_cluster_masks_py import accumulate_cluster_mask_sum
-from .cylib.m_step import compute_cluster_means, compute_covariance_matrix
-# from .cylib.m_step import compute_covariance_matrix
-# from .numbalib.m_step import compute_cluster_means
-from .cylib.e_step import compute_log_p_and_assign
+from .numerics import (accumulate_cluster_mask_sum, compute_cluster_means, compute_covariance_matrices,
+                       compute_log_p_and_assign)
 
 import time
 
 __all__ = ['KK']
-
-def get_diagonal(x):
-    '''
-    Return a writeable view of the diagonal of x
-    '''
-    return x.reshape(-1)[::x.shape[0]+1]
 
 
 def add_slots(meth):
@@ -206,23 +197,8 @@ class KK(object):
         self.cluster_mean = compute_cluster_means(self)
         
         # Compute covariance matrices
-        for cluster in xrange(1, num_clusters):
-            if cluster==1:
-                point = self.mua_point
-            else:
-                point = self.prior_point
-            compute_covariance_matrix(self, cluster)
-            cov = self.covariance[cluster]
-            block_diagonal = get_diagonal(cov.block)
-            
-            # Add prior
-            block_diagonal[:] += point*self.data.noise_variance[cov.unmasked]
-            cov.diagonal[:] += point*self.data.noise_variance[cov.masked]
-            
-            # Normalise
-            factor = 1.0/(num_cluster_members[cluster]+point-1)
-            cov.block *= factor
-            cov.diagonal *= factor
+        compute_covariance_matrices(self)
+
                     
     @add_slots    
     def EC_steps(self, allow_assign_to_noise=True):
