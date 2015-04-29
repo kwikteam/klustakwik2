@@ -28,6 +28,8 @@ def compute_cluster_means(kk):
     do_mean_accum(clusters, unmasked, ustart, uend, features, vstart, vend, cluster_mean, num_added)
         
     for cluster in range(num_clusters):
+        if num_cluster_members[cluster]==0:
+            continue
         prior = 0
         if cluster==1:
             prior = kk.mua_point

@@ -10,9 +10,9 @@ from .linear_algebra import BlockPlusDiagonalMatrix
 from .default_parameters import default_parameters
 
 from .cylib.compute_cluster_masks_py import accumulate_cluster_mask_sum
-# from .cylib.m_step import compute_cluster_means, compute_covariance_matrix
-from .cylib.m_step import compute_covariance_matrix
-from .numbalib.m_step import compute_cluster_means
+from .cylib.m_step import compute_cluster_means, compute_covariance_matrix
+# from .cylib.m_step import compute_covariance_matrix
+# from .numbalib.m_step import compute_cluster_means
 from .cylib.e_step import compute_log_p_and_assign
 
 import time
