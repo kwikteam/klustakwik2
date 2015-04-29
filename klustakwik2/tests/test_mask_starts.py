@@ -54,7 +54,7 @@ def test_mask_starts():
     assert_raises(ValueError, mask_starts, data, 2)
 
     # too many clusters logs a warning and gives us as many as possible
-    clusters = mask_starts(data, 150)    
+    clusters = mask_starts(data, 150)
     assert amin(clusters)==2
     # 102 because we aim for 150 but only have 100 masks, which is 102 clusters (0,1=noise,mua)
     assert 95<amax(clusters)<102 

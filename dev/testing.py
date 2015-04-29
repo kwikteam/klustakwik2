@@ -14,7 +14,7 @@ if __name__=='__main__':
     log_suppress_hierarchy('klustakwik', inclusive=False)
     
     if os.path.exists(fname+'.pickle'):
-    # if False:
+#     if False:
         start_time = time.time()
         data = pickle.load(open(fname+'.pickle', 'rb'))
         print 'load from pickle:', time.time()-start_time

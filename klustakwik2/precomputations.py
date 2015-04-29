@@ -19,7 +19,7 @@ def compute_correction_terms_and_replace_data(raw_data):
 
 
 def sort_masks(raw_data):
-    # TODO: more efficient version of this function
+    # TODO: more efficient version of this function?
     # step 1: sort into lexicographical order of masks
     O = raw_data.offsets
     I = raw_data.unmasked

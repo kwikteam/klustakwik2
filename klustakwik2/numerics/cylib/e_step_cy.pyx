@@ -2,6 +2,7 @@
 #cython: wraparound=False
 #cython: cdivision=True
 #cython: infer_types=True
+# distutils: language = c++
 
 import numpy
 cimport numpy
