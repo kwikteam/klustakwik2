@@ -7,8 +7,7 @@ from numpy.random import randint, rand
 
 # we use the version that is used in klustakwik2 rather than separately testing the numba/cython
 # versions
-from klustakwik2.clustering import (accumulate_cluster_mask_sum, compute_cluster_means,
-                                    compute_covariance_matrix)
+from klustakwik2.clustering import (accumulate_cluster_mask_sum, compute_cluster_means)
 
 from test_compute_cluster_masks import generate_simple_test_kk
 from test_compute_covariance_matrix import test_compute_covariance_matrix
@@ -30,20 +29,6 @@ def test_m_step():
     
     for cluster, cov in enumerate(cov_matrices):
         cluster += 1        
-        if cluster==1:
-            point = kk.mua_point
-        else:
-            point = kk.prior_point
-
-        for i, j in enumerate(cov.unmasked):
-            cov.block[i, i] += point*kk.data.noise_variance[j]
-        for i, j in enumerate(cov.masked):
-            cov.diagonal[i] += point*kk.data.noise_variance[j]
-            
-        factor = 1.0/(num_cluster_members[cluster]+point-1)
-        cov.block *= factor
-        cov.diagonal *= factor
-        
         assert_array_almost_equal(cov.block, kk.covariance[cluster].block)
         assert_array_almost_equal(cov.diagonal, kk.covariance[cluster].diagonal)
     

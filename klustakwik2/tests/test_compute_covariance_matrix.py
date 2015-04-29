@@ -9,7 +9,7 @@ from copy import deepcopy
 # we use the version that is used in klustakwik2 rather than separately testing the numba/cython
 # versions
 from klustakwik2.clustering import (accumulate_cluster_mask_sum, compute_cluster_means,
-                                    compute_covariance_matrix)
+                                    compute_covariance_matrices)
 
 from test_compute_cluster_masks import generate_simple_test_kk
 
@@ -24,9 +24,10 @@ def test_compute_covariance_matrix():
     kk.cluster_mean = compute_cluster_means(kk)
 
     cov_matrices = []
+    
+    compute_covariance_matrices(kk)
 
     for cluster in xrange(1, num_clusters):
-        compute_covariance_matrix(kk, cluster)
         cov = kk.covariance[cluster]
         f2m = kk.orig_features-kk.cluster_mean[cluster, :][newaxis, :]
         ct = kk.orig_correction_terms
@@ -41,6 +42,14 @@ def test_compute_covariance_matrix():
                 block[:, :] += f2m[spike, unmasked][:, newaxis]*f2m[spike, unmasked][newaxis, :]
             for i in xrange(len(unmasked)):
                 block[i, i] += ct[spike, unmasked[i]]
+        if cluster==1:
+            point = kk.mua_point
+        else:
+            point = kk.noise_point
+        for i in xrange(len(cov.unmasked)):
+            block[i, i] += point*kk.data.noise_variance[cov.unmasked[i]]
+        factor = 1.0/(num_cluster_members[cluster]+point-1)
+        block *= factor
         assert_array_almost_equal(block, cov.block)
         cov_matrices.append(deepcopy(cov))
         
