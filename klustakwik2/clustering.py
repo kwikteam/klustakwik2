@@ -180,11 +180,12 @@ class KK(object):
             # Splitting logic
             iterations_until_next_split -= 1
             if num_changed==0 and last_step_full:
+                self.log('info', 'No points changed and last step was full, so trying to split.')
                 iterations_until_next_split = 0
                 
             # Cycle detection/breaking
             cluster_hash = hashlib.sha1(self.clusters.view(uint8)).hexdigest()
-            if cluster_hash in self.cluster_hashes:
+            if cluster_hash in self.cluster_hashes and num_changed>0:
                 if recurse:
                     if cluster_hash in tried_splitting_to_escape_cycle_hashes:
                         self.log('error', 'Cycle detected! Already tried attempting to break out '
@@ -446,7 +447,6 @@ class KK(object):
         cluster_mask_sum[:self.num_special_clusters, :] = -1 # ensure that special clusters are masked
         # Use efficient version
         accumulate_cluster_mask_sum(self, cluster_mask_sum)
-        self.log('debug', 'cluster_mask_sum=\n%s' % cluster_mask_sum)
         
         # Compute the masked and unmasked sets
         self.cluster_masked_features = []

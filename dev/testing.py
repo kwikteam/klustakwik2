@@ -11,7 +11,7 @@ if __name__=='__main__':
     fname, shank = '../temp/testsmallish', 4
     #fname, shank = '../temp/20141009_all_AdjGraph', 1
     
-    log_to_file(fname+'.klg', 'debug')
+    log_to_file(fname+'.klg.'+str(shank), 'debug')
     log_suppress_hierarchy('klustakwik', inclusive=False)
     
     if os.path.exists(fname+'.pickle'):
@@ -32,8 +32,9 @@ if __name__=='__main__':
     kk = KK(data, max_iterations=1000,
 #             split_every=1, split_first=1, # for debugging splits
 #             split_every=1000000, split_first=1000000, # disable splitting
+#             points_for_cluster_mask=1000, # don't use reduced cluster masks
             )
-    kk.register_callback(SaveCluEvery(fname, shank, every=10))
+#     kk.register_callback(SaveCluEvery(fname, shank, every=10))
     kk.register_callback(MonitoringServer())
     
 #     dump_covariance_matrices(kk)
