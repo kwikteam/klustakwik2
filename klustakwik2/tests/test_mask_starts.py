@@ -36,7 +36,7 @@ def generate_multimask_test_data(num_masks, num_points, num_features):
     assert len(offsets)==num_points+1
     fet = hstack(fet)
     fmask = hstack(fmask)
-    unmasked = hstack(unmasked)
+    unmasked = array(hstack(unmasked), dtype=int)
     offsets = array(offsets)
     return RawSparseData(full(num_features, 0.5), full(num_features, 1./12), # mean/var of rand()
                          fet, fmask, unmasked, offsets).to_sparse_data()
