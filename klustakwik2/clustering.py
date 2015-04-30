@@ -16,6 +16,9 @@ import time
 
 __all__ = ['KK']
 
+class PartitionError(Exception):
+    pass
+
 
 def add_slots(meth):
     def new_meth(self, *args, **kwds):
@@ -30,6 +33,7 @@ def add_slots(meth):
         
 class KK(object):
     def __init__(self, data, callbacks=None, name='',
+                 use_noise_cluster=True, use_mua_cluster=True,
                  **params):
         self.name = name
         if callbacks is None:
@@ -46,6 +50,23 @@ class KK(object):
             setattr(self, k, v)
             if name=='':
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
+        # Assignment of special clusters
+        self.num_special_clusters = 0
+        self.first_gaussian_cluster = 0
+        self.special_clusters = {}
+        self.use_noise_cluster = use_noise_cluster
+        self.use_mua_cluster = use_mua_cluster
+        if use_noise_cluster:
+            self.noise_cluster = self.special_clusters['noise'] = self.num_special_clusters
+            self.num_special_clusters += 1
+            self.first_gaussian_cluster += 1
+        else:
+            self.noise_cluster = -2
+        if use_mua_cluster:
+            self.mua_cluster = self.special_clusters['mua'] = self.num_special_clusters
+            self.num_special_clusters += 1
+        else:
+            self.mua_cluster = -2
 
     def register_callback(self, callback, slot='end_iteration'):
         if slot not in self.callbacks:
@@ -67,24 +88,28 @@ class KK(object):
             name = self.name
         log_message(level, msg, name=name)
             
-    def copy(self, name='kk_copy'):
+    def copy(self, name='kk_copy', **additional_params):
         if self.name:
             sep = '.'
         else:
             sep = ''
+        params = self.params.copy()
+        params.update(**additional_params)
         return KK(self.data, name=self.name+sep+name,
                   callbacks=self.callbacks,
-                  **self.params)
+                  **params)
         
-    def subset(self, spikes, name='kk_subset'):
+    def subset(self, spikes, name='kk_subset', **additional_params):
         newdata = self.data.subset(spikes)
         if self.name:
             sep = '.'
         else:
             sep = ''
+        params = self.params.copy()
+        params.update(**additional_params)
         return KK(newdata, name=self.name+sep+name,
                   callbacks=self.callbacks,
-                  **self.params)
+                  **params)
     
     def initialise_clusters(self, clusters):
         self.clusters = clusters
@@ -92,19 +117,20 @@ class KK(object):
         self.reindex_clusters()
     
     def cluster(self, num_starting_clusters):
-        self.log('info', 'Clustering full data set of %d points' % self.data.num_spikes)
-        clusters = mask_starts(self.data, num_starting_clusters)
+        self.log('info', 'Clustering full data set of %d points, %d features' % (self.data.num_spikes,
+                                                                                 self.data.num_features))
+        clusters = mask_starts(self.data, num_starting_clusters, self.num_special_clusters)
         self.cluster_from(clusters)
         
-    def cluster_from(self, clusters, recurse=True, allow_assign_to_noise=True):
+    def cluster_from(self, clusters, recurse=True):
         self.initialise_clusters(clusters)
-        return self.CEM(recurse=recurse, allow_assign_to_noise=allow_assign_to_noise)
+        return self.CEM(recurse=recurse)
     
     def prepare_for_CEM(self):
         self.full_step = True
         self.current_iteration = 0
     
-    def CEM(self, recurse=True, allow_assign_to_noise=True):        
+    def CEM(self, recurse=True):        
         self.prepare_for_CEM()
 
         score = old_score = 0.0
@@ -116,7 +142,7 @@ class KK(object):
             self.M_step()
             self.log('debug', 'Finished M-step')
             self.log('debug', 'Starting EC-steps')
-            self.EC_steps(allow_assign_to_noise=allow_assign_to_noise)
+            self.EC_steps()
             self.log('debug', 'Finished EC-steps')
             self.log('debug', 'Starting compute_cluster_penalties')
             self.compute_cluster_penalties()
@@ -156,11 +182,10 @@ class KK(object):
                     (self.current_iteration>self.split_first and
                      (self.current_iteration-self.split_first)%self.split_every==self.split_every-1) or
                     (num_changed==0 and last_step_full)):
-#                 if True:
                     did_split = self.try_splits()
                
             self.run_callbacks('end_iteration')     
-                    
+            
             if num_changed==0 and last_step_full and not did_split:
                 self.log('info', 'No points changed, previous step was full and did not split, '
                                  'so finishing.')
@@ -171,7 +196,7 @@ class KK(object):
             
         return score
 
-    @add_slots    
+    @add_slots
     def M_step(self):
         # eliminate any clusters with 0 members, compute the list of spikes
         # in each cluster, compute the cluster masks and allocate space for
@@ -185,11 +210,13 @@ class KK(object):
         
         # Normalize by total number of points to give class weight
         denom = float(self.num_spikes+self.noise_point+self.mua_point+
-                                      self.prior_point*(num_clusters-2))
+                                      self.prior_point*(num_clusters-self.num_special_clusters))
         self.weight = weight = (num_cluster_members+self.prior_point)/denom
-        # different calculation for clusters 0 and 1
-        weight[0] = (num_cluster_members[0]+self.noise_point)/denom
-        weight[1] = (num_cluster_members[1]+self.mua_point)/denom
+        # different calculation for special clusters
+        if self.use_noise_cluster:
+            weight[self.noise_cluster] = (num_cluster_members[self.noise_cluster]+self.noise_point)/denom
+        if self.use_mua_cluster:
+            weight[self.mua_cluster] = (num_cluster_members[self.mua_cluster]+self.mua_point)/denom
         
         # Compute means for each cluster
         # Note that we do this densely at the moment, might want to switch
@@ -201,16 +228,11 @@ class KK(object):
 
                     
     @add_slots    
-    def EC_steps(self, allow_assign_to_noise=True):
-        if not allow_assign_to_noise:
-            cluster_start = 2
-        else:
-            cluster_start = 1
-
+    def EC_steps(self):
+        cluster_start = self.num_special_clusters
         num_spikes = self.num_spikes
         num_clusters = self.num_clusters_alive
         num_features = self.num_features
-        
         weight = self.weight
 
         self.old_clusters = self.clusters
@@ -220,11 +242,11 @@ class KK(object):
         self.log_p_second_best = inf*ones(num_spikes)
         num_skipped = 0
         
-        # start with cluster 0 - uniform distribution over space
-        # because we have normalized all dims to 0...1, density will be 1.
-        if allow_assign_to_noise:
-            self.clusters[:] = 0
-            self.log_p_best[:] = -log(weight[0])
+        if self.use_noise_cluster:
+            # start with cluster 0 - uniform distribution over space
+            # because we have normalized all dims to 0...1, density will be 1.
+            self.clusters[:] = self.noise_cluster
+            self.log_p_best[:] = -log(weight[self.noise_cluster])
         
         clusters_to_kill = []
         
@@ -255,7 +277,7 @@ class KK(object):
         # cluster numbers for that
         self.partition_clusters()
     
-    @add_slots    
+    @add_slots
     def compute_cluster_penalties(self):
         num_cluster_members = self.num_cluster_members
         num_clusters = self.num_clusters_alive
@@ -279,7 +301,7 @@ class KK(object):
     def consider_deletion(self):
         num_cluster_members = self.num_cluster_members
         num_clusters = self.num_clusters_alive
-        if num_clusters<3:
+        if num_clusters<=self.num_special_clusters:
             self.log('info', 'Not enough clusters to try deletion')
             return
         sic = self.spikes_in_cluster
@@ -290,7 +312,7 @@ class KK(object):
         deletion_loss = zeros(num_clusters)
         I = arange(self.num_spikes)
         add.at(deletion_loss, self.clusters, log_p_second_best-log_p_best)
-        candidate_cluster = 2+argmin((deletion_loss-self.cluster_penalty)[2:])
+        candidate_cluster = self.num_special_clusters+argmin((deletion_loss-self.cluster_penalty)[self.num_special_clusters:])
         loss = deletion_loss[candidate_cluster]
         delta_pen = self.cluster_penalty[candidate_cluster]
         
@@ -351,7 +373,7 @@ class KK(object):
         '''
         num_cluster_members = array(bincount(self.clusters), dtype=int)
         I = num_cluster_members>0
-        I[0:2] = True # we keep clusters 0 and 1
+        I[0:self.num_special_clusters] = True # we keep special clusters
         remapping = hstack((0, cumsum(I)))[:-1]
         self.clusters = remapping[self.clusters]
         if hasattr(self, 'clusters_second_best'):
@@ -359,13 +381,20 @@ class KK(object):
         self.partition_clusters()
         
     def partition_clusters(self):
-        self.num_cluster_members = num_cluster_members = array(bincount(self.clusters, minlength=2),
-                                                               dtype=int)
+        try:
+            if self.num_special_clusters>0:
+                self.num_cluster_members = num_cluster_members = array(bincount(self.clusters,
+                                                                                minlength=self.num_special_clusters),
+                                                                       dtype=int)
+            else:
+                self.num_cluster_members = num_cluster_members = array(bincount(self.clusters), dtype=int)
+        except ValueError:
+            raise PartitionError
         I = array(argsort(self.clusters), dtype=int)
         y = self.clusters[I]
         n = amax(y)
-        if n<1:
-            n = 1
+        if n<self.num_special_clusters-1:
+            n = self.num_special_clusters-1
         n += 2
         J = searchsorted(y, arange(n))
         self.spikes_in_cluster = I
@@ -393,9 +422,10 @@ class KK(object):
         
         # Compute the sum of 
         cluster_mask_sum = zeros((num_clusters, num_features))
-        cluster_mask_sum[:2, :] = -1 # ensure that clusters 0 and 1 are masked
+        cluster_mask_sum[:self.num_special_clusters, :] = -1 # ensure that special clusters are masked
         # Use efficient version
         accumulate_cluster_mask_sum(self, cluster_mask_sum)
+        self.log('debug', 'cluster_mask_sum=\n%s' % cluster_mask_sum)
         
         # Compute the masked and unmasked sets
         self.cluster_masked_features = []
@@ -411,7 +441,7 @@ class KK(object):
             self.cluster_unmasked_features.append(unmasked)
             self.covariance.append(BlockPlusDiagonalMatrix(masked, unmasked))
             
-    @add_slots    
+    @add_slots
     def try_splits(self):
         did_split = False
         num_clusters = self.num_clusters_alive
@@ -421,7 +451,7 @@ class KK(object):
         self.log('debug', 'Computing score before splitting')
         score = self.compute_score()
         
-        for cluster in xrange(2, num_clusters):
+        for cluster in xrange(self.first_gaussian_cluster, num_clusters):
             if num_clusters>=self.max_possible_clusters:
                 self.log('info', 'No more splitting, already at maximum number of '
                                  'clusters' % self.max_possible_clusters)
@@ -430,22 +460,33 @@ class KK(object):
             spikes_in_cluster = self.get_spikes_in_cluster(cluster)
             if len(spikes_in_cluster)==0:
                 continue
-            K2 = self.subset(spikes_in_cluster, name='split_candidate')
+            K2 = self.subset(spikes_in_cluster, name='split_candidate',
+                             use_noise_cluster=False, use_mua_cluster=False)
             # at this point in C++ code we look for an unused cluster, but here we can just
             # use num_clusters+1
             self.log('debug', 'Trying to split cluster %d' % cluster)
             # initialise with current clusters, do not allow creation of new clusters
-            K2.max_possible_clusters = 3
-            clusters = full(len(spikes_in_cluster), 2, dtype=int)
-            unsplit_score = K2.cluster_from(clusters, recurse=False, allow_assign_to_noise=False)
+            K2.max_possible_clusters = 1
+            clusters = full(len(spikes_in_cluster), 0, dtype=int)
+            try:
+                unsplit_score = K2.cluster_from(clusters, recurse=False)
+            except PartitionError:
+                # todo: logging
+                self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
+                continue
             # initialise randomly, allow for one additional cluster
-            K2.max_possible_clusters = 4
-            clusters = randint(2, 4, size=len(spikes_in_cluster))
+            K2.max_possible_clusters = 2
+            clusters = randint(0, 2, size=len(spikes_in_cluster))
             if len(unique(clusters))!=2: # todo: better way of handling this?
                 continue
-            split_score = K2.cluster_from(clusters, recurse=False, allow_assign_to_noise=False)
+            try:
+                split_score = K2.cluster_from(clusters, recurse=False)
+            except PartitionError:
+                # todo: logging
+                self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
+                continue
             
-            if K2.num_clusters_alive<3:
+            if K2.num_clusters_alive==0: # todo: can this happen?
                 # todo: logging
                 continue
             
@@ -476,8 +517,8 @@ class KK(object):
             K3 = self.copy(name='split_evaluation')
             K3.prepare_for_CEM()
             clusters = self.clusters.copy()
-            I3 = (K2.clusters==3)
-            clusters[spikes_in_cluster[I3]] = num_clusters # next available cluster
+            I1 = (K2.clusters==1)
+            clusters[spikes_in_cluster[I1]] = num_clusters # next available cluster
             K3.initialise_clusters(clusters)
             K3.M_step()
             K3.EC_steps() # todo: original code omits C step - a problem?

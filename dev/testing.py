@@ -29,9 +29,17 @@ if __name__=='__main__':
     print 'Number of spikes:', data.num_spikes
     print 'Number of unique masks:', data.num_masks
     
-    kk = KK(data, max_iterations=1000)
+    kk = KK(data, max_iterations=1000,
+#             split_every=1, split_first=1, # for debugging splits
+            )
 #     kk.register_callback(SaveCluEvery(fname, shank, every=10))
     kk.register_callback(MonitoringServer())
+    
+#     dump_covariance_matrices(kk)
+#     dump_cluster_counts(kk)
+#     dump_cluster_counts(kk, slot='end_M_step')
+#     dump_cluster_counts(kk, slot='start_M_step')
+#     dump_cluster_means(kk)
     
     def printclu_before(kk):
         global clu_here

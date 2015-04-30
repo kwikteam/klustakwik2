@@ -21,6 +21,7 @@ cpdef do_compute_cluster_means(
              integral[:] num_cluster_members,
              floating[:] noise_mean,
              floating mua_point, floating prior_point,
+             integral mua_cluster, integral num_special_clusters,
              ):
     cdef integral p, c, j, k, num_unmasked
     cdef integral num_clusters = num_cluster_members.shape[0]
@@ -38,9 +39,9 @@ cpdef do_compute_cluster_means(
         if num_cluster_members[cluster]==0:
             continue
         prior = 0
-        if cluster==1:
+        if cluster==mua_cluster:
             prior = mua_point
-        elif cluster>=2:
+        elif cluster>=num_special_clusters:
             prior = prior_point
         for i in range(num_features):
             cluster_mean[cluster, i] += noise_mean[i]*(num_cluster_members[cluster]-num_added[cluster, i]) 

@@ -50,17 +50,17 @@ def test_mask_starts():
     assert 90<=data.num_masks<=110 # a bit of leeway because it's random
 
     # too few clusters raises an error
-    assert_raises(ValueError, mask_starts, data, 0)
-    assert_raises(ValueError, mask_starts, data, 2)
+    assert_raises(ValueError, mask_starts, data, 0, 2)
+    assert_raises(ValueError, mask_starts, data, 2, 2)
 
     # too many clusters logs a warning and gives us as many as possible
-    clusters = mask_starts(data, 150)
+    clusters = mask_starts(data, 150, 2)
     assert amin(clusters)==2
     # 102 because we aim for 150 but only have 100 masks, which is 102 clusters (0,1=noise,mua)
     assert 95<amax(clusters)<102 
     
     # half the maximum number of clusters should be ok and give us something to test
-    clusters = mask_starts(data, 50)
+    clusters = mask_starts(data, 50, 2)
     assert amin(clusters)==2
     assert 45<amax(clusters)<50 # a bit of leeway because it's random
         

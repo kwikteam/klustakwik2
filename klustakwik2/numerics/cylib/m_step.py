@@ -9,10 +9,12 @@ def get_diagonal(x):
     return x.reshape(-1)[::x.shape[0]+1]
 
 
+
+
 def compute_cluster_means(kk):
     data = kk.data
     num_clusters = len(kk.num_cluster_members)
-    num_features = kk.num_features    
+    num_features = kk.num_features
     
     cluster_mean = numpy.zeros((num_clusters, num_features))
     num_added = numpy.zeros((num_clusters, num_features), dtype=int)
@@ -22,8 +24,9 @@ def compute_cluster_means(kk):
                 data.features, data.values_start, data.values_end,
                 cluster_mean, num_added,
                 kk.num_cluster_members, data.noise_mean,
-                kk.mua_point, kk.prior_point)
-                        
+                kk.mua_point, kk.prior_point,
+                kk.mua_cluster, kk.num_special_clusters)
+
     return cluster_mean
 
 
@@ -33,7 +36,7 @@ def compute_covariance_matrices(kk):
     num_clusters = len(num_cluster_members)
     num_features = kk.num_features
 
-    for cluster in xrange(1, num_clusters):
+    for cluster in xrange(kk.first_gaussian_cluster, num_clusters):
         cov = kk.covariance[cluster]
         block = cov.block
         block_diagonal = get_diagonal(block)
@@ -45,7 +48,7 @@ def compute_covariance_matrices(kk):
         f2m = numpy.zeros(num_features)
         ct = numpy.zeros(num_features)
         
-        if cluster==1:
+        if kk.use_mua_cluster and cluster==kk.mua_cluster:
             point = kk.mua_point
             do_var_accum_mua(spike_indices, kk.cluster_mean[cluster, :], cov.unmasked, block,
                              data.unmasked, data.unmasked_start, data.unmasked_end,

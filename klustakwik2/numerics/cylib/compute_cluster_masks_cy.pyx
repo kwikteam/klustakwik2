@@ -16,11 +16,12 @@ cpdef doaccum(integral[:] clusters,
               integral[:] vstart,
               integral[:] vend,
               floating[:, :] cluster_mask_sum,
+              integral num_special_clusters,
              ):
     cdef integral p, c, num_unmasked
     for p in range(len(clusters)):
         c = clusters[p]
-        if c<=1:
+        if c<num_special_clusters:
             continue
         num_unmasked = uend[p]-ustart[p]
         for i in range(num_unmasked):
