@@ -16,13 +16,13 @@ cdef double pi = math.pi
 
 # TODO: check that the memory layout assumptions below are correct
 cdef trisolve(
-            floating *chol_block,
-            floating *chol_diagonal,
-            integral *chol_masked,
-            integral *chol_unmasked,
+            floating[:, :] chol_block,
+            floating[:] chol_diagonal,
+            integral[:] chol_masked,
+            integral[:] chol_unmasked,
             integral num_masked, integral num_unmasked,
-            floating *x,
-            floating *root,
+            floating[:] x,
+            floating[:] root,
             ):
     cdef integral ii, jj, i, j
     cdef floating s
@@ -31,8 +31,8 @@ cdef trisolve(
         s = x[i]
         for jj in range(ii):
             j = chol_unmasked[jj]
-            s += chol_block[ii*num_unmasked+jj]
-        root[i] = -s/chol_block[ii*num_unmasked+ii]
+            s += chol_block[ii, jj]
+        root[i] = -s/chol_block[ii, ii]
     for ii in range(num_masked):
         i = chol_masked[ii]
         root[i] = -x[i]/chol_diagonal[ii]
@@ -68,14 +68,8 @@ cpdef int do_log_p_assign_computations(
             ):
     cdef integral i, j, ii, p, num_unmasked
     cdef floating mahal, log_p, cur_log_p_best, cur_log_p_second_best
-    cdef floating * chol_block_ptr = &(chol_block[0, 0])
-    cdef floating * chol_diagonal_ptr = &(chol_diagonal[0])
-    cdef integral * chol_masked_ptr = &(chol_masked[0])
-    cdef integral * chol_unmasked_ptr = &(chol_unmasked[0])
     cdef integral chol_num_unmasked = len(chol_unmasked)
     cdef integral chol_num_masked = len(chol_masked)
-    cdef floating * f2cm_ptr = &(f2cm[0])
-    cdef floating * root_ptr = &(root[0])
     cdef integral num_skipped = 0
 
     for p in range(num_spikes):
@@ -92,10 +86,10 @@ cpdef int do_log_p_assign_computations(
             j = vstart[p]+ii
             f2cm[i] = features[j]-cluster_mean[cluster, i]
         
-        trisolve(chol_block_ptr, chol_diagonal_ptr,
-                 chol_masked_ptr, chol_unmasked_ptr,
+        trisolve(chol_block, chol_diagonal,
+                 chol_masked, chol_unmasked,
                  chol_num_masked, chol_num_unmasked,
-                 f2cm_ptr, root_ptr)
+                 f2cm, root)
         
         mahal = 0
         for i in range(num_features):
