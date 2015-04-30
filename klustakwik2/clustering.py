@@ -2,6 +2,7 @@ from numpy import *
 from numpy.linalg import LinAlgError
 from numpy.random import randint
 from itertools import izip
+import hashlib
 
 from .logger import log_message
 
@@ -40,6 +41,8 @@ class KK(object):
             callbacks = {}
         self.callbacks = callbacks
         self.data = data
+        self.cluster_hashes = set()
+        # user parameters
         self.params = params
         actual_params = default_parameters.copy()
         for k, v in params.iteritems():
@@ -134,9 +137,11 @@ class KK(object):
         self.prepare_for_CEM()
 
         score = old_score = 0.0
+        
+        iterations_until_next_split = self.split_first
+        tried_splitting_to_escape_cycle_hashes = set()
                 
-        #while self.current_iteration==0: # for debugging
-        while self.current_iteration<=self.max_iterations:
+        while self.current_iteration<self.max_iterations:
             self.log('debug', 'Starting iteration %d' % self.current_iteration)
             self.log('debug', 'Starting M-step')
             self.M_step()
@@ -160,7 +165,6 @@ class KK(object):
             self.current_iteration += 1
     
             last_step_full = self.full_step
-            # TODO: add this back in when we have num_changed, etc.
             self.full_step = (num_changed>self.num_changed_threshold*self.num_spikes or
                               num_changed==0 or
                               self.current_iteration % self.full_step_every == 0 or
@@ -173,18 +177,35 @@ class KK(object):
                              'score=%f' % (self.current_iteration, QF_id, self.num_clusters_alive,
                                            num_changed, score))
 
-            # TODO: save current progress
+            # Splitting logic
+            iterations_until_next_split -= 1
+            if num_changed==0 and last_step_full:
+                iterations_until_next_split = 0
+                
+            # Cycle detection/breaking
+            cluster_hash = hashlib.sha1(self.clusters.view(uint8)).hexdigest()
+            if cluster_hash in self.cluster_hashes:
+                if recurse:
+                    if cluster_hash in tried_splitting_to_escape_cycle_hashes:
+                        self.log('error', 'Cycle detected! Already tried attempting to break out '
+                                          'by splitting, so abandoning.')
+                        break
+                    else:
+                        self.log('warning', 'Cycle detected! Attempting to break out by splitting.')
+                        iterations_until_next_split = 0
+                    tried_splitting_to_escape_cycle_hashes.add(cluster_hash)
+                else:
+                    self.log('error', 'Cycle detected! Splitting is not enabled, so abandoning.')
+                    break
+            self.cluster_hashes.add(cluster_hash)
 
             # Try splitting
             did_split = False
-            if recurse and self.split_every>0:
-                if (self.current_iteration==self.split_first or
-                    (self.current_iteration>self.split_first and
-                     (self.current_iteration-self.split_first)%self.split_every==self.split_every-1) or
-                    (num_changed==0 and last_step_full)):
-                    did_split = self.try_splits()
+            if recurse and iterations_until_next_split<=0:
+                did_split = self.try_splits()
+                iterations_until_next_split = self.split_every
                
-            self.run_callbacks('end_iteration')     
+            self.run_callbacks('end_iteration')
             
             if num_changed==0 and last_step_full and not did_split:
                 self.log('info', 'No points changed, previous step was full and did not split, '

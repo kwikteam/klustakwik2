@@ -31,8 +31,9 @@ if __name__=='__main__':
     
     kk = KK(data, max_iterations=1000,
 #             split_every=1, split_first=1, # for debugging splits
+#             split_every=1000000, split_first=1000000, # disable splitting
             )
-#     kk.register_callback(SaveCluEvery(fname, shank, every=10))
+    kk.register_callback(SaveCluEvery(fname, shank, every=10))
     kk.register_callback(MonitoringServer())
     
 #     dump_covariance_matrices(kk)
@@ -52,10 +53,11 @@ if __name__=='__main__':
 #     kk.register_callback(printclu_before, 'start_EC_steps')
 #     kk.register_callback(printclu_after, 'end_EC_steps')
     
-    if False and os.path.exists(fname+'.clu.'+str(shank)+'.flipflop'):
+    if os.path.exists(fname+'.clu.'+str(shank)+'.flipflop'):
+#     if False:
         shutil.copy(fname+'.clu.'+str(shank)+'.flipflop', fname+'.clu.'+str(shank))
-    if False and os.path.exists(fname+'.clu.'+str(shank)):
-    #if False:
+#     if os.path.exists(fname+'.clu.'+str(shank)):
+    if False:
         print 'Loading clusters from file'
         clusters = loadtxt(fname+'.clu.'+str(shank), skiprows=1, dtype=int)
         kk.cluster_from(clusters)
