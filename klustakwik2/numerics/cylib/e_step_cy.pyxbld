@@ -1,0 +1,19 @@
+import os
+if os.name=='nt':
+    def make_ext(modname, pyxfilename):
+        from distutils.extension import Extension
+        return Extension(name=modname,
+                         sources=[pyxfilename],
+                         language='C++',
+                         #extra_compile_args=['-fopenmp'], extra_link_args=['-fopenmp'],
+                         extra_compile_args=['/openmp'],
+                         )
+else:
+    def make_ext(modname, pyxfilename):
+        from distutils.extension import Extension
+        return Extension(name=modname,
+                         sources=[pyxfilename],
+                         language='C++',
+                         libraries=['stdc++'],
+                         extra_compile_args=['-fopenmp'], extra_link_args=['-fopenmp'],
+                         )

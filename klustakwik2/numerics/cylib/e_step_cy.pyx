@@ -9,12 +9,13 @@ cimport numpy
 
 from cython cimport integral, floating
 
+from cython.parallel import prange, threadid
+
 from libc.math cimport log
 
 import math
 cdef double pi = math.pi
 
-# TODO: check that the memory layout assumptions below are correct
 cdef trisolve(
             floating[:, :] chol_block,
             floating[:] chol_diagonal,
@@ -56,8 +57,8 @@ cpdef int do_log_p_assign_computations(
             floating[:] features,
             integral[:] vstart,
             integral[:] vend,
-            floating[:] root,
-            floating[:] f2cm,
+            floating[:] root_multiple,
+            floating[:] f2cm_multiple,
             integral num_features, integral num_spikes,
             floating log_addition,
             integral cluster,
@@ -65,14 +66,23 @@ cpdef int do_log_p_assign_computations(
             floating[:] chol_diagonal,
             integral[:] chol_masked,
             integral[:] chol_unmasked,
+            integral n_cpu,
+            floating[:] cluster_log_p,
             ):
-    cdef integral i, j, ii, p, num_unmasked
-    cdef floating mahal, log_p, cur_log_p_best, cur_log_p_second_best
+    cdef integral i, j, ii, jj, p, num_unmasked
+    cdef floating mahal, log_p, cur_log_p_best, cur_log_p_second_best, s
     cdef integral chol_num_unmasked = len(chol_unmasked)
     cdef integral chol_num_masked = len(chol_masked)
     cdef integral num_skipped = 0
+    cdef integral thread_idx
+    cdef floating *f2cm
+    cdef floating *root
 
-    for p in range(num_spikes):
+    for p in prange(num_spikes, nogil=True, num_threads=n_cpu):
+        thread_idx = threadid()
+        f2cm = &(f2cm_multiple[num_features*thread_idx])
+        root = &(root_multiple[num_features*thread_idx])
+        
         # to save time, only recalculate if the last one was close
         # TODO: replace this with something that doesn't require keeping all of log_p 2D array
 #         if not full_step and clusters[p]==old_clusters[p] and log_p[cluster, p]-log_p[clusters[p], p]>dist_thresh:
@@ -86,24 +96,39 @@ cpdef int do_log_p_assign_computations(
             j = vstart[p]+ii
             f2cm[i] = features[j]-cluster_mean[cluster, i]
         
-        trisolve(chol_block, chol_diagonal,
-                 chol_masked, chol_unmasked,
-                 chol_num_masked, chol_num_unmasked,
-                 f2cm, root)
+        # TriSolve step, inlined for Cython OpenMP support
+        # TODO: check that the memory layout assumptions below are correct
+        for ii in range(chol_num_unmasked):
+            i = chol_unmasked[ii]
+            s = f2cm[i]
+            for jj in range(ii):
+                j = chol_unmasked[jj]
+                s = s+chol_block[ii, jj]
+            root[i] = -s/chol_block[ii, ii]
+        for ii in range(chol_num_masked):
+            i = chol_masked[ii]
+            root[i] = -f2cm[i]/chol_diagonal[ii]
         
         mahal = 0
         for i in range(num_features):
-            mahal += root[i]*root[i]
+            mahal = mahal+root[i]*root[i]
         num_unmasked = uend[p]-ustart[p]
         for ii in range(num_unmasked):
             i = unmasked[ustart[p]+ii]
-            mahal += inv_cov_diag[i]*correction_terms[vstart[p]+ii]
+            mahal = mahal+inv_cov_diag[i]*correction_terms[vstart[p]+ii]
             
         log_p = mahal/2.0+log_addition
         
+        cluster_log_p[p] = log_p
+
+
+    for p in range(num_spikes):
+        
+        log_p = cluster_log_p[p]
+        
         cur_log_p_best = log_p_best[p]
         cur_log_p_second_best = log_p_second_best[p]
-        
+         
         if log_p<cur_log_p_best:
             log_p_second_best[p] = cur_log_p_best
             clusters_second_best[p] = clusters[p]
