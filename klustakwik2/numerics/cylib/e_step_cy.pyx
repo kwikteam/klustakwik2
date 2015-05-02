@@ -16,7 +16,8 @@ from libc.math cimport log
 import math
 cdef double pi = math.pi
 
-cdef trisolve(
+# This function assumes a lower triangular matrix
+cpdef trisolve(
             floating[:, :] chol_block,
             floating[:] chol_diagonal,
             integral[:] chol_masked,
@@ -32,11 +33,11 @@ cdef trisolve(
         s = x[i]
         for jj in range(ii):
             j = chol_unmasked[jj]
-            s += chol_block[ii, jj]
-        root[i] = -s/chol_block[ii, ii]
+            s -= chol_block[ii, jj]*root[j]
+        root[i] = s/chol_block[ii, ii]
     for ii in range(num_masked):
         i = chol_masked[ii]
-        root[i] = -x[i]/chol_diagonal[ii]
+        root[i] = x[i]/chol_diagonal[ii]
 
 
 cpdef int do_log_p_assign_computations(
@@ -97,17 +98,17 @@ cpdef int do_log_p_assign_computations(
             f2cm[i] = features[j]-cluster_mean[cluster, i]
         
         # TriSolve step, inlined for Cython OpenMP support
-        # TODO: check that the memory layout assumptions below are correct
+        # This code is adapted from the function above, see there for details
         for ii in range(chol_num_unmasked):
             i = chol_unmasked[ii]
             s = f2cm[i]
             for jj in range(ii):
                 j = chol_unmasked[jj]
-                s = s+chol_block[ii, jj]
-            root[i] = -s/chol_block[ii, ii]
+                s = s-chol_block[ii, jj]*root[j]
+            root[i] = s/chol_block[ii, ii]
         for ii in range(chol_num_masked):
             i = chol_masked[ii]
-            root[i] = -f2cm[i]/chol_diagonal[ii]
+            root[i] = f2cm[i]/chol_diagonal[ii]
         
         mahal = 0
         for i in range(num_features):

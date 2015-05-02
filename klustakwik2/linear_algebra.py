@@ -4,7 +4,7 @@ Linear algebra routines
 
 from numpy import *
 from numpy.linalg import cholesky, LinAlgError
-from scipy.linalg import cho_factor, cho_solve
+from scipy.linalg import cho_factor, cho_solve, cholesky, solve_triangular
 
 __all__ = ['BlockPlusDiagonalMatrix']
 
@@ -32,9 +32,7 @@ class BlockPlusDiagonalMatrix(object):
         M_chol = self.new_with_same_masks()
         lower = None
         if self.block.size:
-            block, lower = cho_factor(self.block)
-            if lower:
-                block = block.T.copy()
+            block = cholesky(self.block, lower=True)
         else:
             block = zeros_like(self.block)
         if (self.diagonal<=0).any():
@@ -45,6 +43,6 @@ class BlockPlusDiagonalMatrix(object):
     def trisolve(self, x):
         out = zeros(len(x))
         if len(self.unmasked):
-            out[self.unmasked] = cho_solve((self.block, False), x[self.unmasked])            
-        out[self.masked] = -x[self.masked]/self.diagonal
+            out[self.unmasked] = solve_triangular(self.block, x[self.unmasked], lower=True)
+        out[self.masked] = x[self.masked]/self.diagonal
         return out
