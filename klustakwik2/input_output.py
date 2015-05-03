@@ -8,8 +8,10 @@ __all__ = ['load_fet_fmask_to_raw', 'save_clu', 'SaveCluEvery']
 
 
 def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=0):
-    if use_features is None:
+    if use_features is None and drop_last_n_features>0:
         use_features = slice(None, -drop_last_n_features)
+    else:
+        use_features = slice(None)
     fet_fname = fname+'.fet.'+str(shank)
     fmask_fname = fname+'.fmask.'+str(shank)
     # read files
