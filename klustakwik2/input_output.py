@@ -7,7 +7,9 @@ from .logger import log_message
 __all__ = ['load_fet_fmask_to_raw', 'save_clu', 'SaveCluEvery']
 
 
-def load_fet_fmask_to_raw(fname, shank):
+def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=0):
+    if use_features is None:
+        use_features = slice(None, -drop_last_n_features)
     fet_fname = fname+'.fet.'+str(shank)
     fmask_fname = fname+'.fmask.'+str(shank)
     # read files
@@ -15,6 +17,8 @@ def load_fet_fmask_to_raw(fname, shank):
     fmask_file = open(fmask_fname, 'r')
     # read first line of fmask file
     num_features = int(fmask_file.readline())
+    features_to_use = arange(num_features)[use_features]
+    num_features = len(features_to_use)
     # Stage 1: read min/max of fet values for normalisation
     # and count total number of unmasked features
     fet_file.readline() # skip first line (num channels)
@@ -24,8 +28,8 @@ def load_fet_fmask_to_raw(fname, shank):
     total_unmasked_features = 0
     num_spikes = 0
     for fetline, fmaskline in izip(fet_file, fmask_file):
-        vals = fromstring(fetline, dtype=float, sep=' ')
-        fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')
+        vals = fromstring(fetline, dtype=float, sep=' ')[use_features]
+        fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')[use_features]
         inds, = (fmaskvals>0).nonzero()
         total_unmasked_features += len(inds)
         vmin = minimum(vals, vmin)
@@ -49,8 +53,8 @@ def load_fet_fmask_to_raw(fname, shank):
     offsets = zeros(num_spikes+1, dtype=int)
     curoff = 0
     for i, (fetline, fmaskline) in enumerate(izip(fet_file, fmask_file)):
-        fetvals = (fromstring(fetline, dtype=float, sep=' ')-vmin)/vdiff
-        fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')
+        fetvals = (fromstring(fetline, dtype=float, sep=' ')[use_features]-vmin)/vdiff
+        fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')[use_features]
         inds, = (fmaskvals>0).nonzero()
         masked_inds, = (fmaskvals==0).nonzero()
         all_features[curoff:curoff+len(inds)] = fetvals[inds]

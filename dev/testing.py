@@ -21,7 +21,7 @@ if __name__=='__main__':
         print 'load from pickle:', time.time()-start_time
     else:
         start_time = time.time()
-        raw_data = load_fet_fmask_to_raw(fname, shank)
+        raw_data = load_fet_fmask_to_raw(fname, shank, drop_last_n_features=1)
         print 'load_fet_fmask_to_raw:', time.time()-start_time
         data = raw_data.to_sparse_data()
         pickle.dump(data, open(fname+'.pickle', 'wb'), -1)
