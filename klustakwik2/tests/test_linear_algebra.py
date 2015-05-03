@@ -7,6 +7,7 @@ from klustakwik2.linear_algebra import BlockPlusDiagonalMatrix
 from scipy.linalg import cho_factor, cho_solve, cholesky, solve_triangular
 from klustakwik2.numerics.cylib.e_step import trisolve
 from numpy.random import randn
+from numpy.linalg import inv
 
 def test_cholesky_trisolve():
     M = array([[3.5, 0,   0,   0],
@@ -28,7 +29,7 @@ def test_cholesky_trisolve():
     assert_array_almost_equal(M, M_chol.dot(M_chol.T))
     assert_array_almost_equal(cov.block, chol.block.dot(chol.block.T))
     # test trisolve
-    x = randn(4)
+    x = randn(M.shape[0])
     y1 = solve_triangular(M_chol, x, lower=True)
     y2 = chol.trisolve(x)
     y3 = zeros(len(x))
@@ -36,6 +37,16 @@ def test_cholesky_trisolve():
     assert_array_almost_equal(y1, y2)
     assert_array_almost_equal(y1, y3)
     assert_array_almost_equal(y2, y3)
+    # test compute diagonal of inverse of cov matrix used in E-step
+    inv_cov_diag = zeros(len(x))
+    basis_vector = zeros(len(x))
+    for i in xrange(len(x)):
+        basis_vector[i] = 1.0
+        root = chol.trisolve(basis_vector)
+        inv_cov_diag[i] = sum(root**2)
+        basis_vector[:] = 0
+    M_inv_diag = diag(inv(M))
+    assert_array_almost_equal(M_inv_diag, inv_cov_diag)
     
 
 if __name__=='__main__':
