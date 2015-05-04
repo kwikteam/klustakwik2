@@ -277,6 +277,7 @@ class KK(object):
             try:
                 chol = cov.cholesky()
             except LinAlgError:
+                self.log('warning', 'Linear algebra error on cluster '+str(cluster))
                 clusters_to_kill.append(cluster) # todo: we don't actually do anything with this...
                 continue
 

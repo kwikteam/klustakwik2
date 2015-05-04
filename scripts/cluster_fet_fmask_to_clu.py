@@ -15,12 +15,15 @@ import time
 
 if __name__=='__main__':
     (fname, shank), params = parse_args(2, __doc__)
+    
+    # todo: more principled way of extracting script parameters and checking that parameters are valid
+    drop_last_n_features = params.get('drop_last_n_features', 0)
 
     log_to_file(fname+'.klg.'+shank, 'debug')
     log_suppress_hierarchy('klustakwik', inclusive=False)
 
     start_time = time.time()
-    raw_data = load_fet_fmask_to_raw(fname, shank)
+    raw_data = load_fet_fmask_to_raw(fname, shank, drop_last_n_features=drop_last_n_features)
     log_message('debug', 'Loading data from .fet and .fmask file took %.2f s' % (time.time()-start_time))
     data = raw_data.to_sparse_data()
     

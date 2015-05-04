@@ -42,6 +42,7 @@ cpdef trisolve(
 
 cpdef int do_log_p_assign_computations(
             floating[:] noise_mean,
+            floating[:] noise_variance,
             floating[:, :] cluster_mean,
             floating[:] correction_terms,
             floating[:] log_p_best,
@@ -51,15 +52,14 @@ cpdef int do_log_p_assign_computations(
             integral[:] old_clusters,
             char full_step,
             floating[:] inv_cov_diag,
-            floating[:] weight,
             integral[:] unmasked,
             integral[:] ustart,
             integral[:] uend,
             floating[:] features,
             integral[:] vstart,
             integral[:] vend,
-            floating[:] root_multiple,
-            floating[:] f2cm_multiple,
+            floating[:] root,
+            floating[:] f2cm,
             integral num_features, integral num_spikes,
             floating log_addition,
             integral cluster,
@@ -76,13 +76,11 @@ cpdef int do_log_p_assign_computations(
     cdef integral chol_num_masked = len(chol_masked)
     cdef integral num_skipped = 0
     cdef integral thread_idx
-    cdef floating *f2cm
-    cdef floating *root
+    cdef integral vo # vector offset for root and f2cm
 
     for p in prange(num_spikes, nogil=True, num_threads=n_cpu):
         thread_idx = threadid()
-        f2cm = &(f2cm_multiple[num_features*thread_idx])
-        root = &(root_multiple[num_features*thread_idx])
+        vo = num_features*thread_idx
         
         # to save time, only recalculate if the last one was close
         # TODO: replace this with something that doesn't require keeping all of log_p 2D array
@@ -90,33 +88,47 @@ cpdef int do_log_p_assign_computations(
 #             num_skipped += 1
 #             continue
         for i in range(num_features):
-            f2cm[i] = noise_mean[i]-cluster_mean[cluster, i]
+            f2cm[i+vo] = noise_mean[i]-cluster_mean[cluster, i]
         num_unmasked = uend[p]-ustart[p]
         for ii in range(num_unmasked):
             i = unmasked[ustart[p]+ii]
             j = vstart[p]+ii
-            f2cm[i] = features[j]-cluster_mean[cluster, i]
+            f2cm[i+vo] = features[j]-cluster_mean[cluster, i]
         
         # TriSolve step, inlined for Cython OpenMP support
         # This code is adapted from the function above, see there for details
         for ii in range(chol_num_unmasked):
             i = chol_unmasked[ii]
-            s = f2cm[i]
+            s = f2cm[i+vo]
             for jj in range(ii):
                 j = chol_unmasked[jj]
-                s = s-chol_block[ii, jj]*root[j]
-            root[i] = s/chol_block[ii, ii]
+                s = s-chol_block[ii, jj]*root[j+vo]
+            root[i+vo] = s/chol_block[ii, ii]
         for ii in range(chol_num_masked):
             i = chol_masked[ii]
-            root[i] = f2cm[i]/chol_diagonal[ii]
+            root[i+vo] = f2cm[i+vo]/chol_diagonal[ii]
         
         mahal = 0
         for i in range(num_features):
-            mahal = mahal+root[i]*root[i]
+            mahal = mahal+root[i+vo]*root[i+vo]
         num_unmasked = uend[p]-ustart[p]
-        for ii in range(num_unmasked):
-            i = unmasked[ustart[p]+ii]
-            mahal = mahal+inv_cov_diag[i]*correction_terms[vstart[p]+ii]
+#         for ii in range(num_unmasked):
+#             i = unmasked[ustart[p]+ii]
+#             mahal = mahal+inv_cov_diag[i]*correction_terms[vstart[p]+ii]
+        # the above misses out the contribution of the masked terms. To compute this, we note that
+        # correction_terms = noise_variance[i] for masked terms. We can also compute inv_cov_diag but rather
+        # than do this, we just mimic the computation above to be more sure of getting it right.
+        # However! We don't have access to the set of masked points so we have to invert the list of unmasked points
+        jj = -1
+        j = -1
+        for i in range(num_features):
+            if i>j and jj+1<num_unmasked:
+                jj = jj+1
+                j = unmasked[ustart[p]+jj]
+            if i==j:
+                mahal = mahal+inv_cov_diag[i]*correction_terms[vstart[p]+jj]
+            else:
+                mahal = mahal+inv_cov_diag[i]*noise_variance[i]
             
         log_p = mahal/2.0+log_addition
         

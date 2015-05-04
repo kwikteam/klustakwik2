@@ -62,6 +62,9 @@ def compute_covariance_matrices(kk):
                          data.features, data.values_start, data.values_end,
                          f2m, ct, data.correction_terms, num_features,
                          )
+            
+        # add correction term for diagonal
+        cov.diagonal[:] += len(spike_indices)*data.noise_variance[cov.masked]
         
         # Add prior
         block_diagonal[:] += point*data.noise_variance[cov.unmasked]

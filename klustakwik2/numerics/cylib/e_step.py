@@ -24,6 +24,7 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol):
     log_p_best = kk.log_p_best
     log_p_second_best = kk.log_p_second_best
     noise_mean = data.noise_mean
+    noise_variance = data.noise_variance
     cluster_mean = kk.cluster_mean
     correction_terms = data.correction_terms
     
@@ -38,13 +39,14 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol):
     cluster_log_p = numpy.zeros(num_spikes)
 
     num_skipped = do_log_p_assign_computations(
-                                  noise_mean, cluster_mean, correction_terms,
+                                  noise_mean, noise_variance, cluster_mean, correction_terms,
                                   log_p_best, log_p_second_best,
                                   clusters, clusters_second_best, old_clusters,
                                   full_step,
-                                  inv_cov_diag, weight,
+                                  inv_cov_diag,
                                   unmasked, ustart, uend, features, vstart, vend,
-                                  root_multiple, f2cm_multiple, num_features, num_spikes, log_addition, cluster,
+                                  root_multiple, f2cm_multiple,
+                                  num_features, num_spikes, log_addition, cluster,
                                   chol.block, chol.diagonal, chol.masked, chol.unmasked,
                                   n_cpu,
                                   cluster_log_p,
