@@ -241,8 +241,12 @@ class KK(object):
         num_features = self.num_features
         
         # Normalize by total number of points to give class weight
-        denom = float(self.num_spikes+self.noise_point+self.mua_point+
-                                      self.prior_point*(num_clusters-self.num_special_clusters))
+        denom = self.num_spikes+self.prior_point*(num_clusters-self.num_special_clusters)
+        if self.use_noise_cluster:
+            denom += self.noise_point
+        if self.use_mua_cluster:
+            denom += self.mua_point
+        denom = float(denom)
         self.weight = weight = (num_cluster_members+self.prior_point)/denom
         # different calculation for special clusters
         if self.use_noise_cluster:
@@ -455,9 +459,9 @@ class KK(object):
         
         # Compute the sum of 
         cluster_mask_sum = zeros((num_clusters, num_features))
-        cluster_mask_sum[:self.num_special_clusters, :] = -1 # ensure that special clusters are masked
         # Use efficient version
         accumulate_cluster_mask_sum(self, cluster_mask_sum)
+        cluster_mask_sum[:self.num_special_clusters, :] = -1 # ensure that special clusters are masked
         
         # Compute the masked and unmasked sets
         self.cluster_masked_features = []
