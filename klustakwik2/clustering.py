@@ -136,7 +136,7 @@ class KK(object):
     def CEM(self, recurse=True):        
         self.prepare_for_CEM()
 
-        score = old_score = 0.0
+        score = score_raw = score_penalty = None
         
         iterations_until_next_split = self.split_first
         tried_splitting_to_escape_cycle_hashes = set()
@@ -157,7 +157,10 @@ class KK(object):
                 self.consider_deletion()
                 self.log('debug', 'Finished consider_deletion')
             self.log('debug', 'Starting compute_score')
-            old_score, score = score, self.compute_score()
+            old_score = score
+            old_score_raw = score_raw
+            old_score_penalty = score_penalty
+            score, score_raw, score_penalty = self.compute_score()
             self.log('debug', 'Finished compute_score')
             
             num_changed = sum(self.clusters!=self.old_clusters)
@@ -168,14 +171,21 @@ class KK(object):
             self.full_step = (num_changed>self.num_changed_threshold*self.num_spikes or
                               num_changed==0 or
                               self.current_iteration % self.full_step_every == 0 or
-                              score > old_score) 
+                              (old_score is not None and score > old_score)) 
 
             self.reindex_clusters()
     
             QF_id = {True:'F', False:'Q'}[self.full_step]
-            self.log('info', 'Iteration %d%s: %d clusters, %d changed, '
-                             'score=%f' % (self.current_iteration, QF_id, self.num_clusters_alive,
-                                           num_changed, score))
+            msg = 'Iteration %d%s: %d clusters, %d changed, score=%f' % (self.current_iteration, QF_id,
+                                                                         self.num_clusters_alive, num_changed, score)
+            if old_score is not None:
+                msg += ' (decreased by %f)' % (old_score-score)
+            self.log('info', msg)
+            if old_score is not None:
+                msg = 'Change in scores: raw=%f, penalty=%f, total=%f'  % (old_score_raw-score_raw,
+                                                                           old_score_penalty-score_penalty,
+                                                                           old_score-score)
+                self.log('debug', msg)
 
             # Splitting logic
             iterations_until_next_split -= 1
@@ -368,7 +378,7 @@ class KK(object):
         score = raw+penalty
         self.log('debug', 'compute_score: raw %f + penalty %f = %f' % (raw, penalty, score))
         self.run_callbacks('end_compute_score')
-        return score
+        return score, raw, penalty
 
     @property
     def num_spikes(self):
@@ -471,7 +481,7 @@ class KK(object):
         self.log('info', 'Trying to split clusters')
         
         self.log('debug', 'Computing score before splitting')
-        score = self.compute_score()
+        score, _, _ = self.compute_score()
         
         for cluster in xrange(self.first_gaussian_cluster, num_clusters):
             if num_clusters>=self.max_possible_clusters:
@@ -545,7 +555,7 @@ class KK(object):
             K3.M_step()
             K3.EC_steps() # todo: original code omits C step - a problem?
             K3.compute_cluster_penalties()
-            new_score = K3.compute_score()
+            new_score, _, _ = K3.compute_score()
             # todo: logging
             if new_score<score:
                 did_split = True
