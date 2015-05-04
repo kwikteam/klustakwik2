@@ -17,7 +17,7 @@ if __name__=='__main__':
     (fname, shank), params = parse_args(2, __doc__)
     
     # todo: more principled way of extracting script parameters and checking that parameters are valid
-    drop_last_n_features = params.get('drop_last_n_features', 0)
+    drop_last_n_features = params.pop('drop_last_n_features', 0)
 
     log_to_file(fname+'.klg.'+shank, 'debug')
     log_suppress_hierarchy('klustakwik', inclusive=False)
