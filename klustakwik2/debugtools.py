@@ -1,8 +1,9 @@
 '''
 Some tools for debugging
 '''
+from numpy import *
 
-__all__ = ['dump_covariance_matrices', 'dump_cluster_counts', 'dump_cluster_means']
+__all__ = ['dump_covariance_matrices', 'dump_variable']
 
 def covariance_matrix_dump_callback(kk):
     for cluster, cov in enumerate(kk.covariance):
@@ -14,20 +15,27 @@ def covariance_matrix_dump_callback(kk):
 
 def dump_covariance_matrices(kk):
     kk.register_callback(covariance_matrix_dump_callback, 'end_M_step')
-
-
-def cluster_count_dump_callback(kk):
-    kk.log('debug', 'Cluster counts: %s' % kk.num_cluster_members, suffix='cluster_counts')
-
-
-def dump_cluster_counts(kk, slot='end_EC_steps'):
-    kk.register_callback(cluster_count_dump_callback, slot=slot)
-
-
-def cluster_mean_dump_callback(kk):
-    kk.log('debug', 'Cluster means: %s' % kk.cluster_mean, suffix='cluster_mean')
-
-
-def dump_cluster_means(kk):
-    kk.register_callback(cluster_mean_dump_callback, 'end_M_step')
     
+    
+class DumpVariableCallback(object):
+    def __init__(self, varname, iscode, suffix):
+        if not iscode:
+            self.varcode = 'kk.%s' % varname
+        else:
+            self.varcode = varname
+        self.suffix = suffix
+        self.ns = {}
+        exec 'from numpy import *' in self.ns
+    def __call__(self, kk):
+        self.ns['kk'] = kk
+        obj = eval(self.varcode, self.ns)
+        msg = str(obj)
+        if '\n' in msg:
+            msg = '\n'+msg
+        kk.log('debug', msg, suffix=self.suffix)
+    
+    
+def dump_variable(kk, varname, slot='end_iteration', suffix=None, iscode=False):
+    if suffix is None:
+        suffix = varname
+    kk.register_callback(DumpVariableCallback(varname, iscode, suffix), slot=slot)
