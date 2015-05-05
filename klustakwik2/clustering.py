@@ -325,14 +325,15 @@ class KK(object):
         uend = self.data.unmasked_end
         penalty_k = self.penalty_k
         penalty_k_log_n = self.penalty_k_log_n
+        float_num_unmasked = self.data.float_num_unmasked
         for cluster in xrange(num_clusters):
             curspikes = sic[sico[cluster]:sico[cluster+1]]
             num_spikes = len(curspikes)
             if num_spikes>0:
-                num_unmasked = uend[curspikes]-ustart[curspikes]
+                num_unmasked = float_num_unmasked[curspikes]
                 num_params = sum(num_unmasked*(num_unmasked+1)/2+num_unmasked+1)
                 mean_params = float(num_params)/num_spikes
-                cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(mean_params)/2
+                cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(num_spikes)/2
     
     @add_slots    
     def consider_deletion(self):

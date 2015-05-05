@@ -1,7 +1,7 @@
 from numpy import *
 
 __all__ = ['compute_correction_terms_and_replace_data',
-           'sort_masks',
+           'reduce_masks', 'float_num_unmasked',
            ]
 
 def compute_correction_terms_and_replace_data(raw_data):
@@ -17,7 +17,7 @@ def compute_correction_terms_and_replace_data(raw_data):
     return features, correction_terms
 
 
-def sort_masks(raw_data):
+def reduce_masks(raw_data):
     # step 1: sort into lexicographical order of masks
     O = raw_data.offsets
     I = raw_data.unmasked
@@ -27,6 +27,8 @@ def sort_masks(raw_data):
     # consistent (for sorting) and never equal if the underlying arrays
     # are unequal
     x = array(sorted(x, key=lambda p: I[O[p]:O[p+1]].tostring()), dtype=int)
+    y = empty_like(x)
+    y[x] = arange(len(x)) # y is the inverse of x as a permutation
     # step 2: iterate through all indices and add to collection if the
     # indices have changed
     oldstr = None
@@ -47,4 +49,8 @@ def sort_masks(raw_data):
         end[i] = curend
     # step 3: convert into start, end
     new_indices = hstack(new_indices)
-    return x, new_indices, start, end
+    return new_indices, start[y], end[y]
+
+
+def compute_float_num_unmasked(data):
+    return add.reduceat(data.masks, data.offsets[:-1])

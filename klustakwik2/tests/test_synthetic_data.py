@@ -10,7 +10,7 @@ from nose.tools import nottest
 from numpy.random import randint, rand, randn
 
 @nottest
-def generate_synthetic_data(num_features, spikes_per_centre, centres):
+def generate_synthetic_data(num_features, spikes_per_centre, centres, save_to_fet=None):
     '''
     Generates data that comes from a distribution with multiple centres. centres is a list of 
     tuples (fet_mean, fet_std, fmask_mean, fmask_std) and features and masks are generated via
@@ -28,6 +28,11 @@ def generate_synthetic_data(num_features, spikes_per_centre, centres):
     fsum = zeros(num_features)
     fsum2 = zeros(num_features)
     nsum = zeros(num_features)
+    if save_to_fet is not None:
+        fetfile = open(save_to_fet+'.fet.1', 'wt')
+        fmaskfile = open(save_to_fet+'.fmask.1', 'wt')
+        fetfile.write('%d\n' % num_features)
+        fmaskfile.write('%d\n' % num_features)
     for c, s, fmc, fms in centres:
         c = array(c, dtype=float)
         s = array(s, dtype=float)
@@ -36,6 +41,9 @@ def generate_synthetic_data(num_features, spikes_per_centre, centres):
         for i in xrange(spikes_per_centre):
             f = randn(num_features)*s+c
             fm = clip(randn(num_features)*fms+fmc, 0, 1)
+            if save_to_fet is not None:
+                fetfile.write(' '.join(map(str, f))+'\n')
+                fmaskfile.write(' '.join(map(str, fm))+'\n')
             u, = (fm>0).nonzero()
             m, = (fm==0).nonzero()
             u = array(u, dtype=int)
@@ -134,13 +142,9 @@ def test_synthetic_4d_easy_non_gaussian():
         ((0, 1, 1, 0), (0.1,)*4, (0, 0.5, 1.5, 0), (0, 0.05, 0.05, 0.01)),
         ((0, 0, 1, 1), (0.1,)*4, (0, 0, 0.5, 1.5), (0.01, 0, 0.05, 0.05)),
         ((1, 0, 0, 1), (0.1,)*4, (1.5, 0, 0, 1.5), (0.05, 0, 0.01, 0.05)),
-        ])
+        ], save_to_fet='test')
     kk = KK(data)
     kk.cluster(20)
-    print bincount(kk.clusters[0:1000])
-    print bincount(kk.clusters[1000:2000])
-    print bincount(kk.clusters[2000:3000])
-    print bincount(kk.clusters[3000:4000])
     assert len(unique(kk.clusters[0:1000]))==1
     assert len(unique(kk.clusters[1000:2000]))==1
     assert len(unique(kk.clusters[2000:3000]))==1

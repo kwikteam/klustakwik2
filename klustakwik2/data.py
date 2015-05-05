@@ -1,7 +1,8 @@
 from numpy import *
 import time
 
-from .precomputations import sort_masks, compute_correction_terms_and_replace_data
+from .precomputations import (reduce_masks, compute_correction_terms_and_replace_data,
+                              compute_float_num_unmasked)
 from .logger import log_message
 
 __all__ = ['RawSparseData', 'SparseData',
@@ -56,14 +57,16 @@ class RawSparseData(object):
         features, correction_terms = compute_correction_terms_and_replace_data(self)
         log_message('debug', 'Finished compute_correction_terms_and_replace_data', name='data')
         log_message('debug', 'Starting sort_masks', name='data')
-        order, unmasked, unmasked_start, unmasked_end = sort_masks(self)
+        unmasked, unmasked_start, unmasked_end = reduce_masks(self)
         log_message('debug', 'Finished sort_masks', name='data')
+        float_num_unmasked = compute_float_num_unmasked(self)
         return SparseData(self.noise_mean, self.noise_variance,
                           features, self.masks,
-                          values_start[order], values_end[order],
+                          values_start, values_end,
                           unmasked,
                           unmasked_start, unmasked_end,
                           correction_terms,
+                          float_num_unmasked,
                           )
 
 
@@ -80,6 +83,7 @@ class SparseData(object):
                  unmasked,
                  unmasked_start, unmasked_end,
                  correction_terms,
+                 float_num_unmasked,
                  ):
         # Data arrays
         self.noise_mean = noise_mean
@@ -92,6 +96,7 @@ class SparseData(object):
         self.unmasked_start = unmasked_start
         self.unmasked_end = unmasked_end
         self.correction_terms = correction_terms
+        self.float_num_unmasked = float_num_unmasked
         # Derived data
         self.num_spikes = len(self.values_start)
         self.num_features = len(self.noise_mean)
@@ -105,4 +110,5 @@ class SparseData(object):
                           self.unmasked,
                           self.unmasked_start[spikes], self.unmasked_end[spikes],
                           self.correction_terms,
+                          self.float_num_unmasked[spikes],
                           )
