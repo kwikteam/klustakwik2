@@ -149,7 +149,6 @@ class KK(object):
             self.log('debug', 'Starting EC-steps')
             self.EC_steps()
             self.log('debug', 'Finished EC-steps')
-            self.reindex_clusters() # clusters have changed, so reindex
             self.log('debug', 'Starting compute_cluster_penalties')
             self.compute_cluster_penalties()
             self.log('debug', 'Finished compute_cluster_penalties')
@@ -298,7 +297,6 @@ class KK(object):
 
             # LogRootDet is given by log of product of diagonal elements
             log_root_det = sum(log(chol.diagonal))+sum(log(chol.block.diagonal()))
-            self.log('debug', 'Cluster %d log_root_det: %s' % (cluster, log_root_det))
 
             # compute diagonal of inverse of cov matrix
             inv_cov_diag = zeros(num_features)
@@ -308,10 +306,6 @@ class KK(object):
                 root = chol.trisolve(basis_vector)
                 inv_cov_diag[i] = sum(root**2)
                 basis_vector[i] = 0.0
-                
-            # debug chol and inv_cov_diag
-            self.log('debug', 'Cluster %d cholesky:\nBlock:\n%sDiagonal:\n%s' % (cluster, chol.block, chol.diagonal))
-            self.log('debug', 'inv_cov_diag: '+str(inv_cov_diag))
                 
             compute_log_p_and_assign(self, cluster, inv_cov_diag, log_root_det, chol)
 

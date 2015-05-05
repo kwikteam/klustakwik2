@@ -32,8 +32,8 @@ if __name__=='__main__':
     kk = KK(data, max_iterations=1000,
             use_mua_cluster=False,
 #             split_every=1, split_first=1, # for debugging splits
-            split_every=1000000, split_first=1000000, # disable splitting
-            points_for_cluster_mask=1e-100, # don't use reduced cluster masks
+#             split_every=1000000, split_first=1000000, # disable splitting
+#             points_for_cluster_mask=1e-100, # don't use reduced cluster masks
             )
     kk.register_callback(SaveCluEvery(fname, shank, every=50))
     kk.register_callback(MonitoringServer())
