@@ -149,6 +149,7 @@ class KK(object):
             self.log('debug', 'Starting EC-steps')
             self.EC_steps()
             self.log('debug', 'Finished EC-steps')
+            self.reindex_clusters() # clusters have changed, so reindex
             self.log('debug', 'Starting compute_cluster_penalties')
             self.compute_cluster_penalties()
             self.log('debug', 'Finished compute_cluster_penalties')
@@ -297,6 +298,7 @@ class KK(object):
 
             # LogRootDet is given by log of product of diagonal elements
             log_root_det = sum(log(chol.diagonal))+sum(log(chol.block.diagonal()))
+            self.log('debug', 'Cluster %d log_root_det: %s' % (cluster, log_root_det))
 
             # compute diagonal of inverse of cov matrix
             inv_cov_diag = zeros(num_features)
@@ -306,6 +308,10 @@ class KK(object):
                 root = chol.trisolve(basis_vector)
                 inv_cov_diag[i] = sum(root**2)
                 basis_vector[i] = 0.0
+                
+            # debug chol and inv_cov_diag
+            self.log('debug', 'Cluster %d cholesky:\nBlock:\n%sDiagonal:\n%s' % (cluster, chol.block, chol.diagonal))
+            self.log('debug', 'inv_cov_diag: '+str(inv_cov_diag))
                 
             compute_log_p_and_assign(self, cluster, inv_cov_diag, log_root_det, chol)
 
@@ -325,14 +331,15 @@ class KK(object):
         uend = self.data.unmasked_end
         penalty_k = self.penalty_k
         penalty_k_log_n = self.penalty_k_log_n
+        float_num_unmasked = self.data.float_num_unmasked
         for cluster in xrange(num_clusters):
             curspikes = sic[sico[cluster]:sico[cluster+1]]
             num_spikes = len(curspikes)
             if num_spikes>0:
-                num_unmasked = uend[curspikes]-ustart[curspikes]
+                num_unmasked = float_num_unmasked[curspikes]
                 num_params = sum(num_unmasked*(num_unmasked+1)/2+num_unmasked+1)
                 mean_params = float(num_params)/num_spikes
-                cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(mean_params)/2
+                cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(num_spikes)/2
     
     @add_slots    
     def consider_deletion(self):

@@ -1,7 +1,7 @@
 from numpy import *
 
 __all__ = ['compute_correction_terms_and_replace_data',
-           'sort_masks',
+           'sort_masks', 'float_num_unmasked',
            ]
 
 def compute_correction_terms_and_replace_data(raw_data):
@@ -48,3 +48,7 @@ def sort_masks(raw_data):
     # step 3: convert into start, end
     new_indices = hstack(new_indices)
     return x, new_indices, start, end
+
+
+def compute_float_num_unmasked(data):
+    return add.reduceat(data.masks, data.offsets[:-1])
