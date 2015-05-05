@@ -76,10 +76,10 @@ class KK(object):
             self.callbacks[slot] = []
         self.callbacks[slot].append(callback)
         
-    def run_callbacks(self, slot):
+    def run_callbacks(self, slot, *args, **kwds):
         if slot in self.callbacks:
             for callback in self.callbacks[slot]:
-                callback(self)
+                callback(self, *args, **kwds)
             
     def log(self, level, msg, suffix=None):
         if suffix is not None:
@@ -164,6 +164,12 @@ class KK(object):
             self.log('debug', 'Finished compute_score')
             
             num_changed = sum(self.clusters!=self.old_clusters)
+
+            self.run_callbacks('scores', score=score, score_raw=score_raw,
+                               score_penalty=score_penalty, old_score=old_score,
+                               old_score_raw=old_score_raw, old_score_penalty=old_score_penalty,
+                               num_changed=num_changed,
+                               )
             
             self.current_iteration += 1
     
@@ -294,7 +300,7 @@ class KK(object):
                 self.log('warning', 'Linear algebra error on cluster '+str(cluster))
                 clusters_to_kill.append(cluster) # todo: we don't actually do anything with this...
                 continue
-
+            
             # LogRootDet is given by log of product of diagonal elements
             log_root_det = sum(log(chol.diagonal))+sum(log(chol.block.diagonal()))
 
@@ -306,8 +312,13 @@ class KK(object):
                 root = chol.trisolve(basis_vector)
                 inv_cov_diag[i] = sum(root**2)
                 basis_vector[i] = 0.0
+
+            self.run_callbacks('e_step_before_main_loop', cholesky=chol, cluster=cluster,
+                               inv_cov_diag=inv_cov_diag)
                 
             compute_log_p_and_assign(self, cluster, inv_cov_diag, log_root_det, chol)
+            
+            self.run_callbacks('e_step_after_main_loop')
 
         # we've reassigned clusters so we need to recompute the partitions, but we don't want to
         # reindex yet because we may reassign points to different clusters and we need the original
@@ -464,6 +475,8 @@ class KK(object):
         accumulate_cluster_mask_sum(self, cluster_mask_sum)
         cluster_mask_sum[:self.num_special_clusters, :] = -1 # ensure that special clusters are masked
         
+        self.run_callbacks('cluster_mask_sum', cluster_mask_sum=cluster_mask_sum)
+        
         # Compute the masked and unmasked sets
         self.cluster_masked_features = []
         self.cluster_unmasked_features = []
@@ -511,6 +524,8 @@ class KK(object):
                 # todo: logging
                 self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
                 continue
+            self.run_callbacks('split_k2_1', cluster=cluster, K2=K2, unsplit_score=unsplit_score,
+                               score=score)
             # initialise randomly, allow for one additional cluster
             K2.max_possible_clusters = 2
             clusters = randint(0, 2, size=len(spikes_in_cluster))
@@ -522,6 +537,8 @@ class KK(object):
                 # todo: logging
                 self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
                 continue
+            self.run_callbacks('split_k2_2', cluster=cluster, K2=K2, split_score=split_score,
+                               unsplit_score=unsplit_score, score=score)
             
             if K2.num_clusters_alive==0: # todo: can this happen?
                 # todo: logging
@@ -561,6 +578,8 @@ class KK(object):
             K3.EC_steps() # todo: original code omits C step - a problem?
             K3.compute_cluster_penalties()
             new_score, _, _ = K3.compute_score()
+            self.run_callbacks('split_k3', K3=K3, K2=K2, score=score, unsplit_score=unsplit_score,
+                               split_score=split_score, new_score=new_score)
             # todo: logging
             if new_score<score:
                 did_split = True
