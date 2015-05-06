@@ -52,6 +52,8 @@ cpdef do_compute_cluster_means(
 cpdef do_var_accum(
             integral[:] spike_indices,
             floating[:] cluster_mean,
+            floating[:] noise_mean,
+            floating[:] noise_variance,
             integral[:] cov_unmasked,
             floating[:, :] block,
             integral[:] unmasked,
@@ -70,7 +72,7 @@ cpdef do_var_accum(
     for ii in range(num_spikes):
         p = spike_indices[ii]
         for i in range(num_features):
-            f2m[i] = 0
+            f2m[i] = noise_mean[i]-cluster_mean[i]
         num_unmasked = uend[p]-ustart[p]
         for i in range(num_unmasked):
             j = unmasked[ustart[p]+i]
@@ -83,7 +85,7 @@ cpdef do_var_accum(
                 block[i, j] += f2m[cov_unmasked[i]]*f2m[cov_unmasked[j]]
         
         for i in range(num_features):
-            ct[i] = 0
+            ct[i] = noise_variance[i]
         num_unmasked = uend[p]-ustart[p]
         for i in range(num_unmasked):
             ct[unmasked[ustart[p]+i]] = correction_term[vstart[p]+i]
@@ -96,6 +98,8 @@ cpdef do_var_accum(
 cpdef do_var_accum_mua(
             integral[:] spike_indices,
             floating[:] cluster_mean,
+            floating[:] noise_mean,
+            floating[:] noise_variance,
             integral[:] cov_unmasked,
             floating[:, :] block,
             integral[:] unmasked,
@@ -114,7 +118,7 @@ cpdef do_var_accum_mua(
     for ii in range(num_spikes):
         p = spike_indices[ii]
         for i in range(num_features):
-            f2m[i] = 0
+            f2m[i] = noise_mean[i]-cluster_mean[i]
         num_unmasked = uend[p]-ustart[p]
         for i in range(num_unmasked):
             j = unmasked[ustart[p]+i]
@@ -126,7 +130,7 @@ cpdef do_var_accum_mua(
             block[i, i] += f2m[cov_unmasked[i]]*f2m[cov_unmasked[i]]
         
         for i in range(num_features):
-            ct[i] = 0
+            ct[i] = noise_variance[i]
         num_unmasked = uend[p]-ustart[p]
         for i in range(num_unmasked):
             ct[unmasked[ustart[p]+i]] = correction_term[vstart[p]+i]

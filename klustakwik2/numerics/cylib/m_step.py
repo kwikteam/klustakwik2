@@ -50,14 +50,18 @@ def compute_covariance_matrices(kk):
         
         if kk.use_mua_cluster and cluster==kk.mua_cluster:
             point = kk.mua_point
-            do_var_accum_mua(spike_indices, kk.cluster_mean[cluster, :], cov.unmasked, block,
+            do_var_accum_mua(spike_indices, kk.cluster_mean[cluster, :],
+                             kk.data.noise_mean, kk.data.noise_variance,
+                             cov.unmasked, block,
                              data.unmasked, data.unmasked_start, data.unmasked_end,
                              data.features, data.values_start, data.values_end,
                              f2m, ct, data.correction_terms, num_features,
                              )
         else:
             point = kk.prior_point
-            do_var_accum(spike_indices, kk.cluster_mean[cluster, :], cov.unmasked, block,
+            do_var_accum(spike_indices, kk.cluster_mean[cluster, :],
+                         kk.data.noise_mean, kk.data.noise_variance,
+                         cov.unmasked, block,
                          data.unmasked, data.unmasked_start, data.unmasked_end,
                          data.features, data.values_start, data.values_end,
                          f2m, ct, data.correction_terms, num_features,

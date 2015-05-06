@@ -178,8 +178,9 @@ class KK(object):
             if num_changed and not self.full_step:
                 # add these changed clusters to all the candidate sets
                 num_candidates = 0
-                for cluster, candidates in self.quick_step_candidates.iteritems():
+                for cluster, candidates in self.quick_step_candidates.items():
                     candidates = union1d(candidates, clusters_changed)
+                    self.quick_step_candidates[cluster] = candidates
                     num_candidates += len(candidates)
                     if num_candidates>self.max_quick_step_candidates:
                         self.quick_step_candidates = dict()
@@ -381,7 +382,8 @@ class KK(object):
                 num_unmasked = float_num_unmasked[curspikes]
                 num_params = sum(num_unmasked*(num_unmasked+1)/2+num_unmasked+1)
                 mean_params = float(num_params)/num_spikes
-                cluster_penalty[cluster] = penalty_k*mean_params*2+penalty_k_log_n*mean_params*log(num_spikes)/2
+                cluster_penalty[cluster] = (penalty_k*mean_params*2+
+                                            penalty_k_log_n*mean_params*log(self.num_spikes)/2)
     
     @add_slots    
     def consider_deletion(self):
