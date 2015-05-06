@@ -144,11 +144,11 @@ def test_synthetic_4d_easy_non_gaussian():
         ])
     kk = KK(data, dist_thresh=0.0) # no space for error, so we set quick steps off
     kk.cluster(20)
-    print bincount(kk.clusters)
-    print bincount(kk.clusters[0:1000])
-    print bincount(kk.clusters[1000:2000])
-    print bincount(kk.clusters[2000:3000])
-    print bincount(kk.clusters[3000:4000])
+#     print bincount(kk.clusters)
+#     print bincount(kk.clusters[0:1000])
+#     print bincount(kk.clusters[1000:2000])
+#     print bincount(kk.clusters[2000:3000])
+#     print bincount(kk.clusters[3000:4000])
     assert len(unique(kk.clusters[0:1000]))==1
     assert len(unique(kk.clusters[1000:2000]))==1
     assert len(unique(kk.clusters[2000:3000]))==1
