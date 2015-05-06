@@ -550,7 +550,7 @@ class KK(object):
         self.log('debug', 'Computing score before splitting')
         score, _, _ = self.compute_score()
         
-        for cluster in xrange(self.first_gaussian_cluster, num_clusters):
+        for cluster in xrange(self.num_special_clusters, num_clusters):
             if num_clusters>=self.max_possible_clusters:
                 self.log('info', 'No more splitting, already at maximum number of '
                                  'clusters' % self.max_possible_clusters)
