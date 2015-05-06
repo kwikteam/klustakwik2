@@ -135,7 +135,6 @@ def test_synthetic_4d_trivial():
     assert amin(kk.clusters)==2
 
 
-# This test is failed presumably because of non-Gaussianity after corrections?
 def test_synthetic_4d_easy_non_gaussian():
     data = generate_synthetic_data(4, 1000, [
         ((1, 1, 0, 0), (0.1,)*4, (1.5, 0.5, 0, 0), (0.05, 0.05, 0.01, 0)),
@@ -145,6 +144,11 @@ def test_synthetic_4d_easy_non_gaussian():
         ])
     kk = KK(data)
     kk.cluster(20)
+    print bincount(kk.clusters)
+    print bincount(kk.clusters[0:1000])
+    print bincount(kk.clusters[1000:2000])
+    print bincount(kk.clusters[2000:3000])
+    print bincount(kk.clusters[3000:4000])
     assert len(unique(kk.clusters[0:1000]))==1
     assert len(unique(kk.clusters[1000:2000]))==1
     assert len(unique(kk.clusters[2000:3000]))==1

@@ -132,6 +132,7 @@ class KK(object):
     def prepare_for_CEM(self):
         self.full_step = True
         self.current_iteration = 0
+        self.force_next_step_full = False
     
     def CEM(self, recurse=True):        
         self.prepare_for_CEM()
@@ -142,7 +143,15 @@ class KK(object):
         tried_splitting_to_escape_cycle_hashes = set()
                 
         while self.current_iteration<self.max_iterations:
+            if self.force_next_step_full:
+                self.force_next_step_full = False
+                self.full_step = True
+                self.log('debug', 'Next step forced to be full')
             self.log('debug', 'Starting iteration %d' % self.current_iteration)
+            if self.full_step:
+                self.log('debug', 'This step is a full step')
+            else:
+                self.log('debug', 'This step is a quick step')
             self.log('debug', 'Starting M-step')
             self.M_step()
             self.log('debug', 'Finished M-step')
@@ -163,7 +172,20 @@ class KK(object):
             score, score_raw, score_penalty = self.compute_score()
             self.log('debug', 'Finished compute_score')
             
-            num_changed = sum(self.clusters!=self.old_clusters)
+            clusters_changed, = (self.clusters!=self.old_clusters).nonzero()
+            clusters_changed = array(clusters_changed, dtype=int)
+            num_changed = len(clusters_changed)
+            if num_changed and not self.full_step:
+                # add these changed clusters to all the candidate sets
+                num_candidates = 0
+                for cluster, candidates in self.quick_step_candidates.iteritems():
+                    candidates = union1d(candidates, clusters_changed)
+                    num_candidates += len(candidates)
+                    if num_candidates>self.max_quick_step_candidates:
+                        self.quick_step_candidates = dict()
+                        self.force_next_step_full = True
+                        self.log('info', 'Ran out of storage space for quick step, try increasing '
+                                         'max_quick_step_candidates if this happens often.')
 
             self.run_callbacks('scores', score=score, score_raw=score_raw,
                                score_penalty=score_penalty, old_score=old_score,
@@ -172,18 +194,21 @@ class KK(object):
                                )
             
             self.current_iteration += 1
+
+            QF_id = {True:'F', False:'Q'}[self.full_step]
+            msg = 'Iteration %d%s: %d clusters, %d changed, score=%f' % (self.current_iteration, QF_id,
+                                                                         self.num_clusters_alive, num_changed, score)
     
             last_step_full = self.full_step
             self.full_step = (num_changed>self.num_changed_threshold*self.num_spikes or
                               num_changed==0 or
                               self.current_iteration % self.full_step_every == 0 or
-                              (old_score is not None and score > old_score)) 
+                              (old_score is not None and score > old_score))
+            if not hasattr(self, 'old_log_p_best'):
+                self.full_step = True
 
             self.reindex_clusters()
     
-            QF_id = {True:'F', False:'Q'}[self.full_step]
-            msg = 'Iteration %d%s: %d clusters, %d changed, score=%f' % (self.current_iteration, QF_id,
-                                                                         self.num_clusters_alive, num_changed, score)
             if old_score is not None:
                 msg += ' (decreased by %f)' % (old_score-score)
             self.log('info', msg)
@@ -276,21 +301,33 @@ class KK(object):
         num_clusters = self.num_clusters_alive
         num_features = self.num_features
         weight = self.weight
+        
+        if self.full_step:
+            self.old_clusters = self.clusters
+            self.clusters = -ones(num_spikes, dtype=int)
+            self.clusters_second_best = -ones(num_spikes, dtype=int)
+            if hasattr(self, 'log_p_best'):
+                self.old_log_p_best = self.log_p_best
+            self.log_p_best = inf*ones(num_spikes)
+            self.log_p_second_best = inf*ones(num_spikes)
+        else:
+            self.old_clusters = self.clusters.copy()
 
-        self.old_clusters = self.clusters
-        self.clusters = -ones(num_spikes, dtype=int)
-        self.clusters_second_best = -ones(num_spikes, dtype=int)
-        self.log_p_best = inf*ones(num_spikes)
-        self.log_p_second_best = inf*ones(num_spikes)
         num_skipped = 0
         
-        if self.use_noise_cluster:
+        if self.full_step and self.use_noise_cluster:
             # start with cluster 0 - uniform distribution over space
             # because we have normalized all dims to 0...1, density will be 1.
             self.clusters[:] = self.noise_cluster
             self.log_p_best[:] = -log(weight[self.noise_cluster])
         
         clusters_to_kill = []
+        
+        if self.full_step:
+            self.quick_step_candidates = dict()
+            self.collect_candidates = True
+        else:
+            self.collect_candidates = False
         
         for cluster in xrange(cluster_start, num_clusters):
             cov = self.covariance[cluster]
@@ -365,7 +402,10 @@ class KK(object):
         loss = deletion_loss[candidate_cluster]
         delta_pen = self.cluster_penalty[candidate_cluster]
         
+        deleted_clusters = False
+        
         if loss<0:
+            deleted_clusters = True
             # delete this cluster
             num_points_in_candidate = sico[candidate_cluster+1]-sico[candidate_cluster]
             self.log('info', 'Deleting cluster {cluster} ({numpoints} points): lose {lose} but '
@@ -380,12 +420,15 @@ class KK(object):
             # recompute penalties
             self.compute_cluster_penalties()
             
-        # at this point we have invalidated the partitions, so to make sure we don't miss
-        # something, we wipe them out here
-        self.invalidate_partitions()
-        # we've also invalidated the second best log_p and clusters
-        self.log_p_second_best = None
-        self.clusters_second_best = None
+        if deleted_clusters:
+            # at this point we have invalidated the partitions, so to make sure we don't miss
+            # something, we wipe them out here
+            self.invalidate_partitions()
+            # we've also invalidated the second best log_p and clusters
+            self.log_p_second_best = None
+            self.clusters_second_best = None
+            # and we will need to do a full step next time
+            self.force_next_step_full = True
 
     @add_slots    
     def compute_score(self):
@@ -425,8 +468,12 @@ class KK(object):
         I[0:self.num_special_clusters] = True # we keep special clusters
         remapping = hstack((0, cumsum(I)))[:-1]
         self.clusters = remapping[self.clusters]
-        if hasattr(self, 'clusters_second_best'):
-            del self.clusters_second_best
+        total_clusters = sum(I)
+        if hasattr(self, '_total_clusters') and total_clusters<self._total_clusters:
+            self.force_next_step_full = True
+            if hasattr(self, 'clusters_second_best'):
+                del self.clusters_second_best
+        self._total_clusters = total_clusters
         self.partition_clusters()
         
     def partition_clusters(self):
@@ -587,5 +634,9 @@ class KK(object):
                 num_clusters += 1
             else:
                 pass
+            
+        # if we split, should make the next step full
+        if did_split:
+            self.force_next_step_full = True
             
         return did_split

@@ -40,7 +40,7 @@ cpdef trisolve(
         root[i] = x[i]/chol_diagonal[ii]
 
 
-cpdef int do_log_p_assign_computations(
+cpdef do_log_p_assign_computations(
             floating[:] noise_mean,
             floating[:] noise_variance,
             floating[:, :] cluster_mean,
@@ -69,18 +69,23 @@ cpdef int do_log_p_assign_computations(
             integral[:] chol_unmasked,
             integral n_cpu,
             floating[:] cluster_log_p,
+            integral[:] candidates,
             ):
-    cdef integral i, j, ii, jj, p, num_unmasked
+    cdef integral i, j, ii, jj, p, pp, num_unmasked
     cdef floating mahal, log_p, cur_log_p_best, cur_log_p_second_best, s
     cdef integral chol_num_unmasked = len(chol_unmasked)
     cdef integral chol_num_masked = len(chol_masked)
-    cdef integral num_skipped = 0
     cdef integral thread_idx
     cdef integral vo # vector offset for root and f2cm
 
-    for p in prange(num_spikes, nogil=True, num_threads=n_cpu):
+    for pp in prange(num_spikes, nogil=True, num_threads=n_cpu):
         thread_idx = threadid()
         vo = num_features*thread_idx
+        
+        if full_step:
+            p = pp
+        else:
+            p = candidates[pp]
         
         # to save time, only recalculate if the last one was close
         # TODO: replace this with something that doesn't require keeping all of log_p 2D array
@@ -134,8 +139,12 @@ cpdef int do_log_p_assign_computations(
         
         cluster_log_p[p] = log_p
 
+    for pp in range(num_spikes):
 
-    for p in range(num_spikes):
+        if full_step:
+            p = pp
+        else:
+            p = candidates[pp]
         
         log_p = cluster_log_p[p]
         
@@ -150,5 +159,3 @@ cpdef int do_log_p_assign_computations(
         elif log_p<cur_log_p_second_best:
             log_p_second_best[p] = log_p
             clusters_second_best[p] = cluster
-        
-    return num_skipped
