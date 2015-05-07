@@ -34,16 +34,12 @@ if __name__=='__main__':
 #             split_every=1, split_first=1, # for debugging splits
 #             split_every=1000000, split_first=1000000, # disable splitting
 #             points_for_cluster_mask=1e-100, # don't use reduced cluster masks
+            full_step_every=1,
+            always_split_bimodal=True,
             )
     kk.register_callback(SaveCluEvery(fname, shank, every=50))
     kk.register_callback(MonitoringServer())
-    
-#     dump_covariance_matrices(kk)
-#     dump_cluster_counts(kk)
-#     dump_cluster_counts(kk, slot='end_M_step')
-#     dump_cluster_counts(kk, slot='start_M_step')
-#     dump_cluster_means(kk)
-    
+
     def printclu_before(kk):
         global clu_here
         clu_here = kk.clusters.copy()
@@ -55,17 +51,30 @@ if __name__=='__main__':
 #     kk.register_callback(printclu_before, 'start_EC_steps')
 #     kk.register_callback(printclu_after, 'end_EC_steps')
     
-    if os.path.exists(fname+'.clu.'+str(shank)+'.flipflop'):
+#     if os.path.exists(fname+'.clu.'+str(shank)+'.flipflop'):
+# #     if False:
+#         shutil.copy(fname+'.clu.'+str(shank)+'.flipflop', fname+'.clu.'+str(shank))
+# #     if os.path.exists(fname+'.clu.'+str(shank)):
 #     if False:
-        shutil.copy(fname+'.clu.'+str(shank)+'.flipflop', fname+'.clu.'+str(shank))
-#     if os.path.exists(fname+'.clu.'+str(shank)):
-    if False:
-        print 'Loading clusters from file'
-        clusters = loadtxt(fname+'.clu.'+str(shank), skiprows=1, dtype=int)
-        kk.cluster_from(clusters)
-    else:
-        print 'Generating clusters from scratch'
-        kk.cluster(100)
+#         print 'Loading clusters from file'
+#         clusters = loadtxt(fname+'.clu.'+str(shank), skiprows=1, dtype=int)
+#         kk.cluster_from(clusters)
+#     else:
+#         print 'Generating clusters from scratch'
+#         kk.cluster(100)
+    
+    clusters = loadtxt('../temp/testsmallish.start.clu', skiprows=1, dtype=int)
+#     dump_covariance_matrices(kk)
+#     dump_variable(kk, 'cluster_mean', slot='end_M_step')
+#     dump_all(kk, 'cluster_mask_sum')
+#     dump_variable(kk, 'weight', slot='end_M_step')
+#     dump_all(kk, 'split_k2_1')
+#     dump_all(kk, 'split_k2_2')
+#     dump_all(kk, 'split_k3')
+#     dump_variable(kk, 'kk.log_p_best[:10]', iscode=True, slot='end_EC_steps')
+#     dump_variable(kk, 'kk.clusters[:10]', iscode=True, slot='end_EC_steps')
+    kk.cluster_from(clusters)
+    
     save_clu(kk, fname, shank)
     
     clusters = kk.clusters

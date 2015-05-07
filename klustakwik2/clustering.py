@@ -550,6 +550,8 @@ class KK(object):
         self.log('debug', 'Computing score before splitting')
         score, _, _ = self.compute_score()
         
+        self.reindex_clusters()
+        
         for cluster in xrange(self.num_special_clusters, num_clusters):
             if num_clusters>=self.max_possible_clusters:
                 self.log('info', 'No more splitting, already at maximum number of '
@@ -563,14 +565,14 @@ class KK(object):
                              use_noise_cluster=False, use_mua_cluster=False)
             # at this point in C++ code we look for an unused cluster, but here we can just
             # use num_clusters+1
-            self.log('debug', 'Trying to split cluster %d' % cluster)
+            self.log('debug', 'Trying to split cluster %d containing '
+                              '%d points' % (cluster, len(spikes_in_cluster)))
             # initialise with current clusters, do not allow creation of new clusters
             K2.max_possible_clusters = 1
             clusters = full(len(spikes_in_cluster), 0, dtype=int)
             try:
                 unsplit_score = K2.cluster_from(clusters, recurse=False)
             except PartitionError:
-                # todo: logging
                 self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
                 continue
             self.run_callbacks('split_k2_1', cluster=cluster, K2=K2, unsplit_score=unsplit_score,
@@ -590,52 +592,52 @@ class KK(object):
                                unsplit_score=unsplit_score, score=score)
             
             if K2.num_clusters_alive==0: # todo: can this happen?
-                # todo: logging
+                self.log('error', 'No clusters alive in K2')
                 continue
             
             if split_score>=unsplit_score:
-                # todo: logging
+                self.log('debug', 'Score after (%f) splitting worse than before (%f), '
+                                  'so not splitting' % (split_score, unsplit_score))
                 continue
-                
-            # todo: always split bimodal
-#             if (AlwaysSplitBimodal)
-#             {
-#                 DidSplit = 1;
-#                 Output("\n We are always splitting bimodal clusters so it's getting split into cluster %d.\n", (int)UnusedCluster);
-#                 p2 = 0;
-#                 for (p = 0; p < nPoints; p++)
-#                 {
-#                     if (Class[p] == c)
-#                     {
-#                         if (K2.Class[p2] == 2) Class[p] = c;
-#                         else if (K2.Class[p2] == 3) Class[p] = UnusedCluster;
-#                         else Error("split should only produce 2 clusters\n");
-#                         p2++;
-#                     }
-#                     ClassAlive[Class[p]] = 1;
-#                 }
-#             }
-
+            
+            if self.always_split_bimodal:
+                self.log('debug', 'Always splitting bimodal clusters, so splitting cluster '
+                                  '%d into %d' % (cluster, num_clusters))
+                clusters = self.clusters.copy()
+                I1 = (K2.clusters==1)
+                clusters[spikes_in_cluster[I1]] = num_clusters # next available cluster
+                did_split = True
+                self.clusters = clusters
+                num_clusters += 1
+                self.reindex_clusters()
+                continue
+            
             # will splitting improve the score in the whole data set?
             K3 = self.copy(name='split_evaluation')
-            K3.prepare_for_CEM()
             clusters = self.clusters.copy()
             I1 = (K2.clusters==1)
             clusters[spikes_in_cluster[I1]] = num_clusters # next available cluster
-            K3.initialise_clusters(clusters)
+            K3.initialise_clusters(clusters.copy())
+            K3.prepare_for_CEM()
             K3.M_step()
-            K3.EC_steps() # todo: original code omits C step - a problem?
+            K3.EC_steps()
+            K3.clusters = clusters # don't use the newly assigned clusters
             K3.compute_cluster_penalties()
             new_score, _, _ = K3.compute_score()
             self.run_callbacks('split_k3', K3=K3, K2=K2, score=score, unsplit_score=unsplit_score,
                                split_score=split_score, new_score=new_score)
-            # todo: logging
+            self.log('debug', 'Score before split = %f, score after = %f, '
+                              'improvement = %f' % (score, new_score, score-new_score))
             if new_score<score:
+                self.log('debug', 'Score improved after splitting, so splitting cluster '
+                                  '%d into %d' % (cluster, num_clusters))
                 did_split = True
                 self.clusters = K3.clusters
+                #score = new_score
                 num_clusters += 1
+                self.reindex_clusters()
             else:
-                pass
+                self.log('debug', 'Score got worse after splitting')
             
         # if we split, should make the next step full
         if did_split:
