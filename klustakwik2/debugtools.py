@@ -3,7 +3,7 @@ Some tools for debugging
 '''
 from numpy import *
 
-__all__ = ['dump_covariance_matrices', 'dump_variable']
+__all__ = ['dump_covariance_matrices', 'dump_variable', 'dump_all']
 
 def covariance_matrix_dump_callback(kk):
     for cluster, cov in enumerate(kk.covariance):
@@ -39,3 +39,26 @@ def dump_variable(kk, varname, slot='end_iteration', suffix=None, iscode=False):
     if suffix is None:
         suffix = varname
     kk.register_callback(DumpVariableCallback(varname, iscode, suffix), slot=slot)
+
+
+class DumpAllCallback(object):
+    def __init__(self, slot):
+        self.slot = slot
+    def __call__(self, kk, *args, **kwds):
+        kk.log('debug', 'Dumping variables from slot '+self.slot, suffix=self.slot)
+        for i, arg in enumerate(args):
+            self.dump_var(kk, 'arg'+str(i), arg)
+        for k, v in kwds.iteritems():
+            self.dump_var(kk, k, v)
+    def dump_var(self, kk, name, val):
+        msg = name+' = '
+        if isinstance(val, ndarray):
+            msg = msg+'\n'+str(val)
+        else:
+            msg = msg+str(val)
+        kk.log('debug', msg, suffix=self.slot)
+
+
+def dump_all(kk, slot):
+    kk.register_callback(DumpAllCallback(slot), slot=slot)
+    

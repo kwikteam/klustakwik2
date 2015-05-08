@@ -70,6 +70,7 @@ cpdef do_log_p_assign_computations(
             integral n_cpu,
             floating[:] cluster_log_p,
             integral[:] candidates,
+            char only_evaluate_current_clusters,
             ):
     cdef integral i, j, ii, jj, p, pp, num_unmasked
     cdef floating mahal, log_p, cur_log_p_best, cur_log_p_second_best, s
@@ -82,7 +83,7 @@ cpdef do_log_p_assign_computations(
         thread_idx = threadid()
         vo = num_features*thread_idx
         
-        if full_step:
+        if full_step and not only_evaluate_current_clusters:
             p = pp
         else:
             p = candidates[pp]
@@ -138,6 +139,9 @@ cpdef do_log_p_assign_computations(
         log_p = mahal/2.0+log_addition
         
         cluster_log_p[p] = log_p
+
+    if only_evaluate_current_clusters:
+        return
 
     for pp in range(num_spikes):
 

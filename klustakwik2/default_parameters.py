@@ -20,4 +20,5 @@ default_parameters = dict(
      mask_starts=500,
      dist_thresh=log(1000.0),
      max_quick_step_candidates=100000000, # this uses around 760 MB RAM
+     always_split_bimodal=False,
      )
