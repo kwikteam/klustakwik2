@@ -39,6 +39,11 @@ if __name__=='__main__':
             )
     kk.register_callback(SaveCluEvery(fname, shank, every=50))
     kk.register_callback(MonitoringServer())
+    
+    dump_timings(kk, 'M_step')
+    dump_timings(kk, 'EC_steps')
+    dump_timings(kk, 'split_candidate')
+    dump_timings(kk, 'split_evaluation')
 
     def printclu_before(kk):
         global clu_here
@@ -51,29 +56,29 @@ if __name__=='__main__':
 #     kk.register_callback(printclu_before, 'start_EC_steps')
 #     kk.register_callback(printclu_after, 'end_EC_steps')
     
-#     if os.path.exists(fname+'.clu.'+str(shank)+'.flipflop'):
-# #     if False:
-#         shutil.copy(fname+'.clu.'+str(shank)+'.flipflop', fname+'.clu.'+str(shank))
-# #     if os.path.exists(fname+'.clu.'+str(shank)):
+    if os.path.exists(fname+'.clu.'+str(shank)+'.flipflop'):
 #     if False:
-#         print 'Loading clusters from file'
-#         clusters = loadtxt(fname+'.clu.'+str(shank), skiprows=1, dtype=int)
-#         kk.cluster_from(clusters)
-#     else:
-#         print 'Generating clusters from scratch'
-#         kk.cluster(100)
+        shutil.copy(fname+'.clu.'+str(shank)+'.flipflop', fname+'.clu.'+str(shank))
+#     if os.path.exists(fname+'.clu.'+str(shank)):
+    if False:
+        print 'Loading clusters from file'
+        clusters = loadtxt(fname+'.clu.'+str(shank), skiprows=1, dtype=int)
+        kk.cluster_from(clusters)
+    else:
+        print 'Generating clusters from scratch'
+        kk.cluster(100)
     
-    clusters = loadtxt('../temp/testsmallish.start.clu', skiprows=1, dtype=int)
-#     dump_covariance_matrices(kk)
-#     dump_variable(kk, 'cluster_mean', slot='end_M_step')
-#     dump_all(kk, 'cluster_mask_sum')
-#     dump_variable(kk, 'weight', slot='end_M_step')
-#     dump_all(kk, 'split_k2_1')
-#     dump_all(kk, 'split_k2_2')
-#     dump_all(kk, 'split_k3')
-#     dump_variable(kk, 'kk.log_p_best[:10]', iscode=True, slot='end_EC_steps')
-#     dump_variable(kk, 'kk.clusters[:10]', iscode=True, slot='end_EC_steps')
-    kk.cluster_from(clusters)
+#     clusters = loadtxt('../temp/testsmallish.start.clu', skiprows=1, dtype=int)
+# #     dump_covariance_matrices(kk)
+# #     dump_variable(kk, 'cluster_mean', slot='end_M_step')
+# #     dump_all(kk, 'cluster_mask_sum')
+# #     dump_variable(kk, 'weight', slot='end_M_step')
+# #     dump_all(kk, 'split_k2_1')
+# #     dump_all(kk, 'split_k2_2')
+# #     dump_all(kk, 'split_k3')
+# #     dump_variable(kk, 'kk.log_p_best[:10]', iscode=True, slot='end_EC_steps')
+# #     dump_variable(kk, 'kk.clusters[:10]', iscode=True, slot='end_EC_steps')
+#     kk.cluster_from(clusters)
     
     save_clu(kk, fname, shank)
     

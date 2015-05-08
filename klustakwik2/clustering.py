@@ -31,6 +31,17 @@ def add_slots(meth):
     new_meth.__doc__ = meth.__doc__
     return new_meth
 
+class section(object):
+    def __init__(self, kk, name, *args, **kwds):
+        self.kk = kk
+        self.name = name
+        self.args = args
+        self.kwds = kwds
+    def __enter__(self):
+        self.kk.run_callbacks('start_'+self.name, *self.args, **self.kwds)
+    def __exit__(self, type, value, traceback):
+        self.kk.run_callbacks('end_'+self.name, *self.args, **self.kwds)
+
         
 class KK(object):
     def __init__(self, data, callbacks=None, name='',
@@ -577,44 +588,46 @@ class KK(object):
             spikes_in_cluster = self.get_spikes_in_cluster(cluster)
             if len(spikes_in_cluster)==0:
                 continue
-            K2 = self.subset(spikes_in_cluster, name='split_candidate',
-                             use_noise_cluster=False, use_mua_cluster=False)
-            # at this point in C++ code we look for an unused cluster, but here we can just
-            # use num_clusters+1
-            self.log('debug', 'Trying to split cluster %d containing '
-                              '%d points' % (cluster, len(spikes_in_cluster)))
-            # initialise with current clusters, do not allow creation of new clusters
-            K2.max_possible_clusters = 1
-            clusters = full(len(spikes_in_cluster), 0, dtype=int)
-            try:
-                unsplit_score = K2.cluster_from(clusters, recurse=False)
-            except PartitionError:
-                self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
-                continue
-            self.run_callbacks('split_k2_1', cluster=cluster, K2=K2, unsplit_score=unsplit_score,
-                               score=score)
-            # initialise randomly, allow for one additional cluster
-            K2.max_possible_clusters = 2
-            clusters = randint(0, 2, size=len(spikes_in_cluster))
-            if len(unique(clusters))!=2: # todo: better way of handling this?
-                continue
-            try:
-                split_score = K2.cluster_from(clusters, recurse=False)
-            except PartitionError:
-                # todo: logging
-                self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
-                continue
-            self.run_callbacks('split_k2_2', cluster=cluster, K2=K2, split_score=split_score,
-                               unsplit_score=unsplit_score, score=score)
             
-            if K2.num_clusters_alive==0: # todo: can this happen?
-                self.log('error', 'No clusters alive in K2')
-                continue
-            
-            if split_score>=unsplit_score:
-                self.log('debug', 'Score after (%f) splitting worse than before (%f), '
-                                  'so not splitting' % (split_score, unsplit_score))
-                continue
+            with section(self, 'split_candidate'):
+                K2 = self.subset(spikes_in_cluster, name='split_candidate',
+                                 use_noise_cluster=False, use_mua_cluster=False)
+                # at this point in C++ code we look for an unused cluster, but here we can just
+                # use num_clusters+1
+                self.log('debug', 'Trying to split cluster %d containing '
+                                  '%d points' % (cluster, len(spikes_in_cluster)))
+                # initialise with current clusters, do not allow creation of new clusters
+                K2.max_possible_clusters = 1
+                clusters = full(len(spikes_in_cluster), 0, dtype=int)
+                try:
+                    unsplit_score = K2.cluster_from(clusters, recurse=False)
+                except PartitionError:
+                    self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
+                    continue
+                self.run_callbacks('split_k2_1', cluster=cluster, K2=K2, unsplit_score=unsplit_score,
+                                   score=score)
+                # initialise randomly, allow for one additional cluster
+                K2.max_possible_clusters = 2
+                clusters = randint(0, 2, size=len(spikes_in_cluster))
+                if len(unique(clusters))!=2: # todo: better way of handling this?
+                    continue
+                try:
+                    split_score = K2.cluster_from(clusters, recurse=False)
+                except PartitionError:
+                    # todo: logging
+                    self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
+                    continue
+                self.run_callbacks('split_k2_2', cluster=cluster, K2=K2, split_score=split_score,
+                                   unsplit_score=unsplit_score, score=score)
+                
+                if K2.num_clusters_alive==0: # todo: can this happen?
+                    self.log('error', 'No clusters alive in K2')
+                    continue
+                
+                if split_score>=unsplit_score:
+                    self.log('debug', 'Score after (%f) splitting worse than before (%f), '
+                                      'so not splitting' % (split_score, unsplit_score))
+                    continue
             
             if self.always_split_bimodal:
                 self.log('debug', 'Always splitting bimodal clusters, so splitting cluster '
@@ -627,27 +640,28 @@ class KK(object):
                 self.reindex_clusters()
                 num_clusters = self.num_clusters_alive
                 continue
-            
-            # will splitting improve the score in the whole data set?
-            K3 = self.copy(name='split_evaluation')
-            clusters = self.clusters.copy()
-            
-            K3.initialise_clusters(clusters)
-            K3.prepare_for_CEM()
-            K3.M_step()
-            K3.EC_steps(only_evaluate_current_clusters=True)
-            K3.compute_cluster_penalties()
-            score_ref, _, _ = K3.compute_score()
-            
-            I1 = (K2.clusters==1)
-            clusters[spikes_in_cluster[I1]] = num_clusters # next available cluster
 
-            K3.initialise_clusters(clusters)
-            K3.prepare_for_CEM()
-            K3.M_step()
-            K3.EC_steps(only_evaluate_current_clusters=True)
-            K3.compute_cluster_penalties()
-            score_new, _, _ = K3.compute_score()
+            with section(self, 'split_evaluation'):            
+                # will splitting improve the score in the whole data set?
+                K3 = self.copy(name='split_evaluation')
+                clusters = self.clusters.copy()
+                
+                K3.initialise_clusters(clusters)
+                K3.prepare_for_CEM()
+                K3.M_step()
+                K3.EC_steps(only_evaluate_current_clusters=True)
+                K3.compute_cluster_penalties()
+                score_ref, _, _ = K3.compute_score()
+                
+                I1 = (K2.clusters==1)
+                clusters[spikes_in_cluster[I1]] = num_clusters # next available cluster
+    
+                K3.initialise_clusters(clusters)
+                K3.prepare_for_CEM()
+                K3.M_step()
+                K3.EC_steps(only_evaluate_current_clusters=True)
+                K3.compute_cluster_penalties()
+                score_new, _, _ = K3.compute_score()
             
             if score_new<score_ref:
                 self.log('debug', 'Score improved after splitting, so splitting cluster '
