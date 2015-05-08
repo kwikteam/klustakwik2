@@ -574,8 +574,8 @@ class KK(object):
         num_clusters = self.num_clusters_alive
         
         self.log('info', 'Trying to split clusters')
-        self.log('debug', 'Computing score before splitting')
-        score, _, _ = self.compute_score()
+        
+        score_ref = None
 
         self.reindex_clusters()
         
@@ -604,8 +604,8 @@ class KK(object):
                 except PartitionError:
                     self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
                     continue
-                self.run_callbacks('split_k2_1', cluster=cluster, K2=K2, unsplit_score=unsplit_score,
-                                   score=score)
+                self.run_callbacks('split_k2_1', cluster=cluster, K2=K2,
+                                   unsplit_score=unsplit_score)
                 # initialise randomly, allow for one additional cluster
                 K2.max_possible_clusters = 2
                 clusters = randint(0, 2, size=len(spikes_in_cluster))
@@ -618,7 +618,7 @@ class KK(object):
                     self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
                     continue
                 self.run_callbacks('split_k2_2', cluster=cluster, K2=K2, split_score=split_score,
-                                   unsplit_score=unsplit_score, score=score)
+                                   unsplit_score=unsplit_score)
                 
                 if K2.num_clusters_alive==0: # todo: can this happen?
                     self.log('error', 'No clusters alive in K2')
@@ -646,12 +646,13 @@ class KK(object):
                 K3 = self.copy(name='split_evaluation')
                 clusters = self.clusters.copy()
                 
-                K3.initialise_clusters(clusters)
-                K3.prepare_for_CEM()
-                K3.M_step()
-                K3.EC_steps(only_evaluate_current_clusters=True)
-                K3.compute_cluster_penalties()
-                score_ref, _, _ = K3.compute_score()
+                if score_ref is None:
+                    K3.initialise_clusters(clusters)
+                    K3.prepare_for_CEM()
+                    K3.M_step()
+                    K3.EC_steps(only_evaluate_current_clusters=True)
+                    K3.compute_cluster_penalties()
+                    score_ref, _, _ = K3.compute_score()
                 
                 I1 = (K2.clusters==1)
                 clusters[spikes_in_cluster[I1]] = num_clusters # next available cluster
@@ -670,6 +671,7 @@ class KK(object):
                 self.clusters = K3.clusters.copy()
                 self.reindex_clusters()
                 num_clusters = self.num_clusters_alive
+                score_ref = score_new
             else:
                 self.log('debug', 'Score got worse after splitting')
                         
