@@ -44,6 +44,11 @@ if __name__=='__main__':
     dump_timings(kk, 'EC_steps')
     dump_timings(kk, 'split_candidate')
     dump_timings(kk, 'split_evaluation')
+    dump_timings(kk, 'compute_cluster_penalties')
+    dump_timings(kk, 'consider_deletion')
+    dump_timings(kk, 'reindex_clusters')
+    dump_timings(kk, 'compute_cluster_masks')
+    dump_timings(kk, 'try_splits')
 
     def printclu_before(kk):
         global clu_here

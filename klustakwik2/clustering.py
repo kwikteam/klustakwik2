@@ -466,7 +466,6 @@ class KK(object):
         raw = sum(self.log_p_best)
         score = raw+penalty
         self.log('debug', 'compute_score: raw %f + penalty %f = %f' % (raw, penalty, score))
-        self.run_callbacks('end_compute_score')
         return score, raw, penalty
 
     @property
@@ -481,6 +480,7 @@ class KK(object):
     def num_clusters_alive(self):
         return len(self.num_cluster_members)
     
+    @add_slots
     def reindex_clusters(self):
         '''
         Remove any clusters with 0 members (except for clusters 0 and 1),
@@ -609,12 +609,11 @@ class KK(object):
                 # initialise randomly, allow for one additional cluster
                 K2.max_possible_clusters = 2
                 clusters = randint(0, 2, size=len(spikes_in_cluster))
-                if len(unique(clusters))!=2: # todo: better way of handling this?
+                if amax(clusters)!=1:
                     continue
                 try:
                     split_score = K2.cluster_from(clusters, recurse=False)
                 except PartitionError:
-                    # todo: logging
                     self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
                     continue
                 self.run_callbacks('split_k2_2', cluster=cluster, K2=K2, split_score=split_score,
