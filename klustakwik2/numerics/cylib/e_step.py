@@ -4,7 +4,8 @@ import multiprocessing
 
 __all__ = ['compute_log_p_and_assign']
 
-def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol):
+def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol,
+                             only_evaluate_current_clusters):
     num_clusters = len(kk.num_cluster_members)
     num_features = kk.num_features
     num_spikes = kk.num_spikes
@@ -38,7 +39,10 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol):
     root_multiple = numpy.zeros(num_features*n_cpu)
     cluster_log_p = numpy.zeros(num_spikes)
     
-    if full_step:
+    if only_evaluate_current_clusters:
+        candidates = kk.quick_step_candidates[cluster]
+        num_spikes = len(candidates)
+    elif full_step:
         candidates = zeros(0, dtype=int)
     else:
         candidates = kk.quick_step_candidates[cluster]
@@ -57,9 +61,12 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol):
                                   n_cpu,
                                   cluster_log_p,
                                   candidates,
+                                  only_evaluate_current_clusters,
                                   )
     
-    if full_step and kk.collect_candidates and hasattr(kk, 'old_log_p_best'):
+    if only_evaluate_current_clusters:
+        kk.log_p_best[candidates] = cluster_log_p[candidates]
+    elif full_step and kk.collect_candidates and hasattr(kk, 'old_log_p_best'):
         candidates, = (cluster_log_p-kk.old_log_p_best<=kk.dist_thresh).nonzero()
         kk.quick_step_candidates[cluster] = array(candidates, dtype=int)
         if sum(len(v) for v in kk.quick_step_candidates.itervalues())>kk.max_quick_step_candidates:

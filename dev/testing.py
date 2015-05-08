@@ -35,7 +35,7 @@ if __name__=='__main__':
 #             split_every=1000000, split_first=1000000, # disable splitting
 #             points_for_cluster_mask=1e-100, # don't use reduced cluster masks
             full_step_every=1,
-            always_split_bimodal=True,
+#             always_split_bimodal=True,
             )
     kk.register_callback(SaveCluEvery(fname, shank, every=50))
     kk.register_callback(MonitoringServer())
