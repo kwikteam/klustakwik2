@@ -19,14 +19,21 @@ if __name__=='__main__':
         drop_last_n_features=0,
         save_clu_every=None,
         run_monitoring_server=False,
+        save_all_clu=False,
+        debug=True,
         )
     (fname, shank), params = parse_args(2, script_params, __doc__.strip()+'\n')
     
     drop_last_n_features = params.pop('drop_last_n_features')
     save_clu_every = params.pop('save_clu_every')
     run_monitoring_server = params.pop('run_monitoring_server')
+    save_all_clu = params.pop('save_all_clu')
+    debug = params.pop('debug')
 
-    log_to_file(fname+'.klg.'+shank, 'debug')
+    if debug:
+        log_to_file(fname+'.klg.'+shank, 'debug')
+    else:
+        log_to_file(fname+'.klg.'+shank, 'info')
     log_suppress_hierarchy('klustakwik', inclusive=False)
 
     start_time = time.time()
@@ -40,9 +47,9 @@ if __name__=='__main__':
     kk = KK(data, **params)
     
     if save_clu_every is not None:
-        kk.register_callback(SaveCluEvery(fname, shank, save_clu_every))
+        kk.register_callback(SaveCluEvery(fname, shank, save_clu_every, save_all=save_all_clu))
     if run_monitoring_server:
-        kk.register_callback(MonitoringServer)
+        kk.register_callback(MonitoringServer())
     
     kk.cluster(kk.mask_starts)
     clusters = kk.clusters
