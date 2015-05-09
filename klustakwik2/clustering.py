@@ -193,18 +193,25 @@ class KK(object):
             clusters_changed, = (self.clusters!=self.old_clusters).nonzero()
             clusters_changed = array(clusters_changed, dtype=int)
             num_changed = len(clusters_changed)
-            if num_changed and not self.full_step:
+            if num_changed and not self.full_step and self.full_step_every>1:
                 # add these changed clusters to all the candidate sets
                 num_candidates = 0
+                max_quick_step_candidates = min(self.max_quick_step_candidates,
+                    self.max_quick_step_candidates_fraction*self.num_spikes*self.num_clusters_alive)
                 for cluster, candidates in self.quick_step_candidates.items():
                     candidates = union1d(candidates, clusters_changed)
                     self.quick_step_candidates[cluster] = candidates
                     num_candidates += len(candidates)
-                    if num_candidates>self.max_quick_step_candidates:
+                    if num_candidates>max_quick_step_candidates:
                         self.quick_step_candidates = dict()
                         self.force_next_step_full = True
-                        self.log('info', 'Ran out of storage space for quick step, try increasing '
-                                         'max_quick_step_candidates if this happens often.')
+                        if num_candidates>self.max_quick_step_candidates:
+                            self.log('info', 'Ran out of storage space for quick step, try increasing '
+                                             'max_quick_step_candidates if this happens often.')
+                        else:
+                            self.log('debug', 'Exceeded quick step point fraction, next step '
+                                              'will be full')
+                        break
 
             self.run_callbacks('scores', score=score, score_raw=score_raw,
                                score_penalty=score_penalty, old_score=old_score,

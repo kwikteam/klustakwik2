@@ -18,7 +18,8 @@ default_parameters = dict(
      split_every=40,
      max_possible_clusters=1000,
      mask_starts=500,
-     dist_thresh=log(1000.0),
+     dist_thresh=log(10000.0),
      max_quick_step_candidates=100000000, # this uses around 760 MB RAM
+     max_quick_step_candidates_fraction=0.4,
      always_split_bimodal=False,
      )

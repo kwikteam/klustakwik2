@@ -66,14 +66,21 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol,
     
     if only_evaluate_current_clusters:
         kk.log_p_best[candidates] = cluster_log_p[candidates]
-    elif full_step and kk.collect_candidates and hasattr(kk, 'old_log_p_best'):
+    elif full_step and kk.collect_candidates and hasattr(kk, 'old_log_p_best') and kk.full_step_every>1:
+        max_quick_step_candidates = min(kk.max_quick_step_candidates,
+            kk.max_quick_step_candidates_fraction*kk.num_spikes*kk.num_clusters_alive)
         candidates, = (cluster_log_p-kk.old_log_p_best<=kk.dist_thresh).nonzero()
         kk.quick_step_candidates[cluster] = array(candidates, dtype=int)
-        if sum(len(v) for v in kk.quick_step_candidates.itervalues())>kk.max_quick_step_candidates:
+        num_candidates = sum(len(v) for v in kk.quick_step_candidates.itervalues())
+        if num_candidates>max_quick_step_candidates:
             kk.collect_candidates = False
             kk.quick_step_candidates.clear()
             kk.force_next_step_full = True
-            kk.log('info', 'Ran out of storage space for quick step, try increasing '
-                           'max_quick_step_candidates if this happens often.')
+            if num_candidates>kk.max_quick_step_candidates:
+                kk.log('info', 'Ran out of storage space for quick step, try increasing '
+                               'max_quick_step_candidates if this happens often.')
+            else:
+                kk.log('debug', 'Exceeded quick step point fraction, next step '
+                                'will be full')
     
     return kk.num_spikes-num_spikes
