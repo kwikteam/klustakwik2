@@ -21,26 +21,48 @@ class PartitionError(Exception):
     pass
 
 
-def add_slots(meth):
-    def new_meth(self, *args, **kwds):
-        self.run_callbacks('start_'+meth.__name__)
-        res = meth(self, *args, **kwds)
-        self.run_callbacks('end_'+meth.__name__)
-        return res
-    new_meth.__name__ = meth.__name__
-    new_meth.__doc__ = meth.__doc__
-    return new_meth
-
 class section(object):
     def __init__(self, kk, name, *args, **kwds):
         self.kk = kk
         self.name = name
         self.args = args
         self.kwds = kwds
+        if not hasattr(kk, '_section_timings_t_total'):
+            kk._section_timings_t_total = {}
+            kk._section_timings_num_calls = {}
+        if name not in kk._section_timings_t_total:
+            kk._section_timings_t_total[name] = 0.0
+            kk._section_timings_num_calls[name] = 0
     def __enter__(self):
         self.kk.run_callbacks('start_'+self.name, *self.args, **self.kwds)
+        self.t_start = time.time()
     def __exit__(self, type, value, traceback):
+        this_time = time.time()-self.t_start
         self.kk.run_callbacks('end_'+self.name, *self.args, **self.kwds)
+        if self.kk.name:
+            self.kk.log('debug', 'This call: %.2f ms.' % (this_time*1000),
+                        suffix='timing.'+self.name)
+            return
+        name = self.name
+        st_t = self.kk._section_timings_t_total
+        st_n = self.kk._section_timings_num_calls
+        st_t[name] += this_time
+        st_n[name] += 1
+        mean_time = st_t[name]/st_n[name]
+        self.kk.log('debug', 'This call: %.2f ms. Average: %.2f ms. Total: %.2f s. '
+                             'Num calls: %d' % (this_time*1000, mean_time*1000,
+                                                st_t[name], st_n[name]),
+                    suffix='timing.'+self.name)
+
+
+def add_slots(meth):
+    def new_meth(self, *args, **kwds):
+        with section(self, meth.__name__, *args, **kwds):
+            res = meth(self, *args, **kwds)
+        return res
+    new_meth.__name__ = meth.__name__
+    new_meth.__doc__ = meth.__doc__
+    return new_meth
 
         
 class KK(object):
@@ -198,20 +220,21 @@ class KK(object):
                 num_candidates = 0
                 max_quick_step_candidates = min(self.max_quick_step_candidates,
                     self.max_quick_step_candidates_fraction*self.num_spikes*self.num_clusters_alive)
-                for cluster, candidates in self.quick_step_candidates.items():
-                    candidates = union1d(candidates, clusters_changed)
-                    self.quick_step_candidates[cluster] = candidates
-                    num_candidates += len(candidates)
-                    if num_candidates>max_quick_step_candidates:
-                        self.quick_step_candidates = dict()
-                        self.force_next_step_full = True
-                        if num_candidates>self.max_quick_step_candidates:
-                            self.log('info', 'Ran out of storage space for quick step, try increasing '
-                                             'max_quick_step_candidates if this happens often.')
-                        else:
-                            self.log('debug', 'Exceeded quick step point fraction, next step '
-                                              'will be full')
-                        break
+                with section(self, 'quick_step_union'):
+                    for cluster, candidates in self.quick_step_candidates.items():
+                        candidates = union1d(candidates, clusters_changed)
+                        self.quick_step_candidates[cluster] = candidates
+                        num_candidates += len(candidates)
+                        if num_candidates>max_quick_step_candidates:
+                            self.quick_step_candidates = dict()
+                            self.force_next_step_full = True
+                            if num_candidates>self.max_quick_step_candidates:
+                                self.log('info', 'Ran out of storage space for quick step, try increasing '
+                                                 'max_quick_step_candidates if this happens often.')
+                            else:
+                                self.log('debug', 'Exceeded quick step point fraction, next step '
+                                                  'will be full')
+                            break
 
             self.run_callbacks('scores', score=score, score_raw=score_raw,
                                score_penalty=score_penalty, old_score=old_score,

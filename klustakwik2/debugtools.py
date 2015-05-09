@@ -4,7 +4,7 @@ Some tools for debugging
 from numpy import *
 import time
 
-__all__ = ['dump_covariance_matrices', 'dump_variable', 'dump_all', 'dump_timings']
+__all__ = ['dump_covariance_matrices', 'dump_variable', 'dump_all']
 
 def covariance_matrix_dump_callback(kk):
     for cluster, cov in enumerate(kk.covariance):
@@ -62,40 +62,3 @@ class DumpAllCallback(object):
 
 def dump_all(kk, slot):
     kk.register_callback(DumpAllCallback(slot), slot=slot)
-    
-
-class SectionTimer(object):
-    def __init__(self, method_name, filter=None, name=None):
-        self.t_total = 0.0
-        self.num_calls = 0
-        self.method_name = method_name
-        if filter is None:
-            filter = lambda kk: False
-        self.filter = filter
-        if name is None:
-            name = 'time_'+method_name
-        self.name = name
-    def start(self, kk):
-        if kk.name:
-            return
-        if self.filter(kk):
-            return
-        self.t_start = time.time()
-    def end(self, kk):
-        if kk.name:
-            return
-        if self.filter(kk):
-            return
-        this_time = time.time()-self.t_start
-        self.t_total += this_time
-        self.num_calls += 1
-        mean_time = self.t_total/self.num_calls
-        kk.log('debug', 'This call: %.2f ms. Average: %.2f ms' % (this_time*1000, mean_time*1000),
-               suffix=self.name)
-        
-
-def dump_timings(kk, method_name):
-    section_timer = SectionTimer(method_name)
-    kk.register_callback(section_timer.start, slot='start_'+method_name)
-    kk.register_callback(section_timer.end, slot='end_'+method_name)
-    
