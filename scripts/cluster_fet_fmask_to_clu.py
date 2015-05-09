@@ -14,10 +14,17 @@ import sys
 import time
 
 if __name__=='__main__':
-    (fname, shank), params = parse_args(2, __doc__)
+    script_params = default_parameters.copy()
+    script_params.update(
+        drop_last_n_features=0,
+        save_clu_every=None,
+        run_monitoring_server=False,
+        )
+    (fname, shank), params = parse_args(2, script_params, __doc__.strip()+'\n')
     
-    # todo: more principled way of extracting script parameters and checking that parameters are valid
-    drop_last_n_features = params.pop('drop_last_n_features', 0)
+    drop_last_n_features = params.pop('drop_last_n_features')
+    save_clu_every = params.pop('save_clu_every')
+    run_monitoring_server = params.pop('run_monitoring_server')
 
     log_to_file(fname+'.klg.'+shank, 'debug')
     log_suppress_hierarchy('klustakwik', inclusive=False)
@@ -31,6 +38,11 @@ if __name__=='__main__':
     log_message('info', 'Number of unique masks in data set: '+str(data.num_masks))
 
     kk = KK(data, **params)
+    
+    if save_clu_every is not None:
+        kk.register_callback(SaveCluEvery(fname, shank, save_clu_every))
+    if run_monitoring_server:
+        kk.register_callback(MonitoringServer)
     
     kk.cluster(kk.mask_starts)
     clusters = kk.clusters
