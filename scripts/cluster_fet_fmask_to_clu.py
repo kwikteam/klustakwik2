@@ -63,7 +63,7 @@ if __name__=='__main__':
     if start_from_clu is None:
         kk.cluster(num_starting_clusters)
     else:
-        clusters = loadtxt(start_from_clu, skiprows=1, dtype=int)
+        clusters = load_clu(start_from_clu)
         kk.cluster_from(clusters)
     clusters = kk.clusters
     savetxt(fname+'.clu.'+shank, clusters, '%d', header=str(amax(clusters)), comments='')

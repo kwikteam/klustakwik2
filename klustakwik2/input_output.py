@@ -4,7 +4,7 @@ from itertools import izip
 from .data import RawSparseData
 from .logger import log_message
 
-__all__ = ['load_fet_fmask_to_raw', 'save_clu', 'SaveCluEvery']
+__all__ = ['load_fet_fmask_to_raw', 'save_clu', 'load_clu', 'SaveCluEvery']
 
 
 def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=0):
@@ -77,7 +77,11 @@ def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=
 
 
 def save_clu(kk, fname, shank):
-    savetxt(fname+'.clu.'+str(shank), kk.clusters, '%d', header=str(amax(kk.clusters)), comments='')
+    savetxt(fname+'.clu.'+str(shank), kk.clusters+1, '%d', header=str(amax(kk.clusters)), comments='')
+    
+
+def load_clu(fname):
+    return loadtxt(fname, skiprows=1, dtype=int)-1
 
 
 class SaveCluEvery(object):
