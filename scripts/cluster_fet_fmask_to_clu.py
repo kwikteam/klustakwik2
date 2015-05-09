@@ -21,14 +21,23 @@ if __name__=='__main__':
         run_monitoring_server=False,
         save_all_clu=False,
         debug=True,
+        num_starting_clusters=500,
+        start_from_clu=None,
+        use_noise_cluster=True,
+        use_mua_cluster=True,
         )
-    (fname, shank), params = parse_args(2, script_params, __doc__.strip()+'\n')
+    (fname, shank), params = parse_args(2, script_params, __doc__.strip()+'\n',
+                                        string_args=set(['start_from_clu']))
     
     drop_last_n_features = params.pop('drop_last_n_features')
     save_clu_every = params.pop('save_clu_every')
     run_monitoring_server = params.pop('run_monitoring_server')
     save_all_clu = params.pop('save_all_clu')
     debug = params.pop('debug')
+    num_starting_clusters = params.pop('num_starting_clusters')
+    start_from_clu = params.pop('start_from_clu')
+    use_noise_cluster = params.pop('use_noise_cluster')
+    use_mua_cluster = params.pop('use_mua_cluster')
 
     if debug:
         log_to_file(fname+'.klg.'+shank, 'debug')
@@ -44,14 +53,18 @@ if __name__=='__main__':
     log_message('info', 'Number of spikes in data set: '+str(data.num_spikes))
     log_message('info', 'Number of unique masks in data set: '+str(data.num_masks))
 
-    kk = KK(data, **params)
+    kk = KK(data, use_noise_cluster=use_noise_cluster, use_mua_cluster=use_mua_cluster, **params)
     
     if save_clu_every is not None:
         kk.register_callback(SaveCluEvery(fname, shank, save_clu_every, save_all=save_all_clu))
     if run_monitoring_server:
         kk.register_callback(MonitoringServer())
     
-    kk.cluster(kk.mask_starts)
+    if start_from_clu is None:
+        kk.cluster(num_starting_clusters)
+    else:
+        clusters = loadtxt(start_from_clu, skiprows=1, dtype=int)
+        kk.cluster_from(clusters)
     clusters = kk.clusters
     savetxt(fname+'.clu.'+shank, clusters, '%d', header=str(amax(clusters)), comments='')
     
