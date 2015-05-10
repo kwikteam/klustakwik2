@@ -205,7 +205,7 @@ class KK(object):
             self.log('debug', 'Starting compute_cluster_penalties')
             self.compute_cluster_penalties()
             self.log('debug', 'Finished compute_cluster_penalties')
-            if recurse:
+            if recurse and self.full_step: # only delete after a full step to simplify quick steps
                 self.log('debug', 'Starting consider_deletion')
                 self.consider_deletion()
                 self.log('debug', 'Finished consider_deletion')
@@ -250,7 +250,8 @@ class KK(object):
 
             QF_id = {True:'F', False:'Q'}[self.full_step]
             msg = 'Iteration %d%s: %d clusters, %d changed, score=%f' % (self.current_iteration, QF_id,
-                                                                         self.num_clusters_alive, num_changed, score)
+                                                                         self.num_clusters_alive,
+                                                                         num_changed, score)
     
             last_step_full = self.full_step
             self.full_step = (num_changed>self.num_changed_threshold*self.num_spikes or
@@ -463,9 +464,11 @@ class KK(object):
         I = arange(self.num_spikes)
         add.at(deletion_loss, self.clusters, log_p_second_best-log_p_best)
         candidate_cluster = self.num_special_clusters+argmin((deletion_loss-self.cluster_penalty)[self.num_special_clusters:])
-        loss = deletion_loss[candidate_cluster]
+        loss = deletion_loss[candidate_cluster]-self.cluster_penalty[candidate_cluster]
         delta_pen = self.cluster_penalty[candidate_cluster]
         
+#         self.log('debug', 'deletion_loss=%s\ncandidate_cluster=%d\n')
+#         
         deleted_clusters = False
         
         if loss<0:
@@ -487,7 +490,7 @@ class KK(object):
         if deleted_clusters:
             # at this point we have invalidated the partitions, so to make sure we don't miss
             # something, we wipe them out here
-            self.invalidate_partitions()
+            self.reindex_clusters()
             # we've also invalidated the second best log_p and clusters
             self.log_p_second_best = None
             self.clusters_second_best = None
