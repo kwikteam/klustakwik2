@@ -38,7 +38,7 @@ if __name__=='__main__':
 #             always_split_bimodal=True,
 #             dist_thresh=15,
             )
-    kk.register_callback(SaveCluEvery(fname, shank, every=50))
+    kk.register_callback(SaveCluEvery(fname, shank))
     kk.register_callback(MonitoringServer())
     
     def printclu_before(kk):
