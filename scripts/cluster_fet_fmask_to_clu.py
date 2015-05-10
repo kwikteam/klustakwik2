@@ -25,6 +25,7 @@ if __name__=='__main__':
         start_from_clu=None,
         use_noise_cluster=True,
         use_mua_cluster=True,
+        subset_schedule=None,
         )
     (fname, shank), params = parse_args(2, script_params, __doc__.strip()+'\n',
                                         string_args=set(['start_from_clu']))
@@ -38,6 +39,15 @@ if __name__=='__main__':
     start_from_clu = params.pop('start_from_clu')
     use_noise_cluster = params.pop('use_noise_cluster')
     use_mua_cluster = params.pop('use_mua_cluster')
+    subset_schedule = params.pop('subset_schedule')
+    
+    if subset_schedule is not None:
+        if save_clu_every is not None:
+            print 'Cannot save intermediate clu files when using subsetting'
+            exit(1)
+        if not use_noise_cluster:
+            print 'Must use noise cluster when using subsetting'
+            exit(1)
 
     if debug:
         log_to_file(fname+'.klg.'+shank, 'debug')
@@ -61,7 +71,10 @@ if __name__=='__main__':
         kk.register_callback(MonitoringServer())
     
     if start_from_clu is None:
-        kk.cluster(num_starting_clusters)
+        if subset_schedule is None:
+            kk.cluster(num_starting_clusters)
+        else:
+            kk.cluster_with_subset_schedule(num_starting_clusters, subset_schedule)
     else:
         clusters = load_clu(start_from_clu)
         kk.cluster_from(clusters)

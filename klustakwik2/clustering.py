@@ -3,6 +3,7 @@ from numpy.linalg import LinAlgError
 from numpy.random import randint
 from itertools import izip
 import hashlib
+from random import shuffle
 
 from .logger import log_message
 
@@ -162,10 +163,32 @@ class KK(object):
         self.clusters = clusters
         self.old_clusters = -1*ones(len(self.clusters), dtype=int)
         self.reindex_clusters()
+        
+    def cluster_with_subset_schedule(self, num_starting_clusters, schedule):
+        schedule = array(schedule)
+        if schedule[-1]!=1:
+            raise ValueError("Last value in subset schedule must be 1")
+        if (diff(schedule)<=0).any():
+            raise ValueError("Subset schedule must be strictly increasing")
+        if (schedule<=0).any():
+            raise ValueError("All subset schedule fractions must be between 0 and 1")
+        spikes = arange(self.num_spikes)
+        shuffle(spikes)
+        I_end = unique(array((self.num_spikes+1)*schedule, dtype=int))
+        clusters = mask_starts(self.data, num_starting_clusters, self.num_special_clusters)
+        clusters[I_end[0]:] = 0 # assign to noise, they will quickly get reassigned
+        for i, i_end in enumerate(I_end):
+            self.log('info', 'Subsetting stage %d of %d, %d points of %d' % (i+1, len(I_end), i_end,
+                                                                             self.num_spikes))
+            kk_sub = self.subset(spikes[:i_end], name='')
+            kk_sub.cluster_from(clusters[:i_end])
+            clusters[:i_end] = kk_sub.clusters
+        self.clusters = zeros(self.num_spikes, dtype=int)
+        self.clusters[spikes] = clusters
     
     def cluster(self, num_starting_clusters):
-        self.log('info', 'Clustering full data set of %d points, %d features' % (self.data.num_spikes,
-                                                                                 self.data.num_features))
+        self.log('info', 'Clustering data set of %d points, %d features' % (self.data.num_spikes,
+                                                                            self.data.num_features))
         clusters = mask_starts(self.data, num_starting_clusters, self.num_special_clusters)
         self.cluster_from(clusters)
         
