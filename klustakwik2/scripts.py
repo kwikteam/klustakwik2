@@ -17,6 +17,10 @@ def parse_args(num_args, allowed_params, msg, string_args=set()):
     for spec in sys.argv[num_args+1:]:
         name, val = spec.split('=')
         if name not in string_args:
+            if val.lower()=='true':
+                val = 'True'
+            elif val.lower()=='false':
+                val = 'False'
             val = eval(val)
         params[name] = val
     for k in params.keys():
