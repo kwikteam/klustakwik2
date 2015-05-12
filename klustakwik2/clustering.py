@@ -232,6 +232,8 @@ class KK(object):
                 self.log('debug', 'Starting consider_deletion')
                 self.consider_deletion()
                 self.log('debug', 'Finished consider_deletion')
+            else:
+                self.comparable_clusters = self.clusters
             self.log('debug', 'Starting compute_score')
             old_score = score
             old_score_raw = score_raw
@@ -239,7 +241,7 @@ class KK(object):
             score, score_raw, score_penalty = self.compute_score()
             self.log('debug', 'Finished compute_score')
             
-            clusters_changed, = (self.clusters!=self.old_clusters).nonzero()
+            clusters_changed, = (self.comparable_clusters!=self.old_clusters).nonzero()
             clusters_changed = array(clusters_changed, dtype=int)
             num_changed = len(clusters_changed)
             if num_changed and not self.full_step and self.full_step_every>1:
@@ -510,6 +512,7 @@ class KK(object):
             # recompute penalties
             self.compute_cluster_penalties()
             
+        self.comparable_clusters = self.clusters
         if deleted_clusters:
             # at this point we have invalidated the partitions, so to make sure we don't miss
             # something, we wipe them out here
