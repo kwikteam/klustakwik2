@@ -69,6 +69,7 @@ def add_slots(meth):
 class KK(object):
     def __init__(self, data, callbacks=None, name='',
                  use_noise_cluster=True, use_mua_cluster=True,
+                 is_subset=False, is_copy=False,
                  **params):
         self.name = name
         if callbacks is None:
@@ -76,7 +77,10 @@ class KK(object):
         self.callbacks = callbacks
         self.data = data
         self.cluster_hashes = set()
+        self.is_subset = is_subset
+        self.is_copy = is_copy
         # user parameters
+        show_params = name=='' and not is_subset and not is_copy
         self.params = params
         actual_params = default_parameters.copy()
         for k, v in params.iteritems():
@@ -85,9 +89,9 @@ class KK(object):
             actual_params[k] = v
         for k, v in actual_params.iteritems():
             setattr(self, k, v)
-            if name=='':
+            if show_params:
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
-        if name=='':
+        if show_params:
             for k in ['use_noise_cluster', 'use_mua_cluster']:
                 v = getattr(self, k, v)
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
@@ -145,6 +149,7 @@ class KK(object):
         return KK(self.data, name=self.name+sep+name,
                   callbacks=self.callbacks,
                   use_noise_cluster=use_noise_cluster, use_mua_cluster=use_mua_cluster,
+                  is_copy=True,
                   **params)
         
     def subset(self, spikes, name='kk_subset', **additional_params):
@@ -157,6 +162,7 @@ class KK(object):
         params.update(**additional_params)
         return KK(newdata, name=self.name+sep+name,
                   callbacks=self.callbacks,
+                  is_subset=True,
                   **params)
     
     def initialise_clusters(self, clusters):
@@ -174,17 +180,32 @@ class KK(object):
             raise ValueError("All subset schedule fractions must be between 0 and 1")
         spikes = arange(self.num_spikes)
         shuffle(spikes)
-        I_end = unique(array((self.num_spikes+1)*schedule, dtype=int))
+        I_end = unique(array(self.num_spikes*schedule, dtype=int))
         clusters = mask_starts(self.data, num_starting_clusters, self.num_special_clusters)
+        clusters = clusters[spikes]
         clusters[I_end[0]:] = 0 # assign to noise, they will quickly get reassigned
         for i, i_end in enumerate(I_end):
             self.log('info', 'Subsetting stage %d of %d, %d points of %d' % (i+1, len(I_end), i_end,
                                                                              self.num_spikes))
-            kk_sub = self.subset(spikes[:i_end], name='')
-            kk_sub.cluster_from(clusters[:i_end])
+            if i==0:
+                split_first = self.split_first
+            else:
+                split_first = 0
+            if i_end<len(spikes):
+                kk_sub = self.subset(spikes[:i_end], name='', split_first=split_first,
+                                     break_fraction=self.subset_break_fraction,
+                                     use_noise_cluster=self.use_noise_cluster,
+                                     use_mua_cluster=self.use_mua_cluster,
+                                     )
+            else:
+                kk_sub = self.copy(name='', split_first=split_first)
+                clusters_new = zeros(self.num_spikes, dtype=int)
+                clusters_new[spikes] = clusters
+                clusters = clusters_new
+            kk_sub.cluster_from(clusters[:i_end].copy())
             clusters[:i_end] = kk_sub.clusters
-        self.clusters = zeros(self.num_spikes, dtype=int)
-        self.clusters[spikes] = clusters
+        self.clusters = kk_sub.clusters
+        self.reindex_clusters()
     
     def cluster(self, num_starting_clusters):
         self.log('info', 'Clustering data set of %d points, %d features' % (self.data.num_spikes,
@@ -208,6 +229,8 @@ class KK(object):
         
         iterations_until_next_split = self.split_first
         tried_splitting_to_escape_cycle_hashes = set()
+        
+        self.log('info', 'Starting iteration 0 with %d clusters' % self.num_clusters_alive)
                 
         while self.current_iteration<self.max_iterations:
             if self.force_next_step_full:
@@ -228,12 +251,11 @@ class KK(object):
             self.log('debug', 'Starting compute_cluster_penalties')
             self.compute_cluster_penalties()
             self.log('debug', 'Finished compute_cluster_penalties')
+            self.comparable_clusters = self.clusters
             if recurse and self.full_step: # only delete after a full step to simplify quick steps
                 self.log('debug', 'Starting consider_deletion')
                 self.consider_deletion()
                 self.log('debug', 'Finished consider_deletion')
-            else:
-                self.comparable_clusters = self.clusters
             self.log('debug', 'Starting compute_score')
             old_score = score
             old_score_raw = score_raw
@@ -332,10 +354,14 @@ class KK(object):
                 self.log('info', 'No points changed, previous step was full and did not split, '
                                  'so finishing.')
                 break
+            
+            if num_changed<self.break_fraction*self.num_spikes and last_step_full:
+                self.log('info', 'Number of points changed below break fraction, so finishing.')
+                break
         else:
             # ran out of iterations
             self.log('info', 'Number of iterations exceeded maximum %d' % self.max_iterations)
-            
+
         return score
 
     @add_slots

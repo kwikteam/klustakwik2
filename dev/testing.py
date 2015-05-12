@@ -37,8 +37,10 @@ if __name__=='__main__':
 #             full_step_every=1,
 #             always_split_bimodal=True,
 #             dist_thresh=15,
+#             subset_break_fraction=0.01,
+#             break_fraction=0.01,
             )
-    #kk.register_callback(SaveCluEvery(fname, shank))
+#     kk.register_callback(SaveCluEvery(fname, shank, every=1))
     kk.register_callback(MonitoringServer())
     
     def printclu_before(kk):
@@ -62,7 +64,7 @@ if __name__=='__main__':
         kk.cluster_from(clusters)
     else:
         print 'Generating clusters from scratch'
-        #kk.cluster_with_subset_schedule(100, [0.1, 0.25, 1.0])
+        #kk.cluster_with_subset_schedule(100, [0.99, 1.0])
         kk.cluster(100)
     
 #     clusters = loadtxt('../temp/testsmallish.start.clu', skiprows=1, dtype=int)

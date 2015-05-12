@@ -106,7 +106,7 @@ class SaveCluEvery(object):
         
     def __call__(self, kk):
         t_cur = time.time()
-        if kk.name=='' and t_cur>self.t_next:
+        if kk.name=='' and t_cur>self.t_next and not kk.is_subset:
             shank = str(self.shank)
             if self.save_all:
                 shank = str(shank)+'.iter'+str(kk.current_iteration)

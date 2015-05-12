@@ -21,4 +21,6 @@ default_parameters = dict(
      max_quick_step_candidates=100000000, # this uses around 760 MB RAM
      max_quick_step_candidates_fraction=0.4,
      always_split_bimodal=False,
+     subset_break_fraction=0.01,
+     break_fraction=0.0,
      )

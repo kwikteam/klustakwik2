@@ -43,8 +43,7 @@ if __name__=='__main__':
     
     if subset_schedule is not None:
         if save_clu_every is not None:
-            print 'Cannot save intermediate clu files when using subsetting'
-            exit(1)
+            print 'Note that intermediate clu files will only be saved for the last subset operation.'
         if not use_noise_cluster:
             print 'Must use noise cluster when using subsetting'
             exit(1)

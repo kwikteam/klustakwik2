@@ -74,7 +74,7 @@ def test_synthetic_2d_trivial():
         ((1, 0),   (0.01, 0.01), (1, 0),     (0.0, 0.0)),
         ((0, 1),   (0.01, 0.01), (0, 1),     (0.0, 0.0)),
         ])
-    kk = KK(data)
+    kk = KK(data, points_for_cluster_mask=1e-100)
     kk.cluster(10)
     assert len(unique(kk.clusters[:100]))==1
     assert len(unique(kk.clusters[100:]))==1
@@ -93,7 +93,7 @@ def test_synthetic_2d_easy():
         ((1, 0), (0.01,)*2, (0.5, 0), (0.01, 0.0)),
         ((0, 1), (0.01,)*2, (0, 0.5), (0.0, 0.01)),
         ])
-    kk = KK(data)
+    kk = KK(data, points_for_cluster_mask=1e-100)
     kk.cluster(10)
     assert len(unique(kk.clusters[:100]))==1
     assert len(unique(kk.clusters[100:]))==1
@@ -108,7 +108,7 @@ def test_synthetic_4d_easy():
         ((0, 0, 1, 1), (0.1,)*4, (0, 0, 0.5, 1.5), (0, 0, 0.05, 0.05)),
         ((1, 0, 0, 1), (0.1,)*4, (1.5, 0, 0, 1.5), (0.05, 0, 0, 0.05)),
         ])
-    kk = KK(data)
+    kk = KK(data, points_for_cluster_mask=1e-100)
     kk.cluster(20)
     assert len(unique(kk.clusters[0:1000]))==1
     assert len(unique(kk.clusters[1000:2000]))==1
@@ -125,7 +125,7 @@ def test_synthetic_4d_trivial():
         ((0, 0, 1, 1), (0.1,)*4, (0, 0, 0.5, 1.5), (0,)*4),
         ((1, 0, 0, 1), (0.1,)*4, (1.5, 0, 0, 1.5), (0,)*4),
         ])
-    kk = KK(data)
+    kk = KK(data, points_for_cluster_mask=1e-100)
     kk.cluster(20)
     assert len(unique(kk.clusters[0:1000]))==1
     assert len(unique(kk.clusters[1000:2000]))==1
@@ -144,11 +144,6 @@ def test_synthetic_4d_easy_non_gaussian():
         ])
     kk = KK(data, dist_thresh=0.0) # no space for error, so we set quick steps off
     kk.cluster(20)
-#     print bincount(kk.clusters)
-#     print bincount(kk.clusters[0:1000])
-#     print bincount(kk.clusters[1000:2000])
-#     print bincount(kk.clusters[2000:3000])
-#     print bincount(kk.clusters[3000:4000])
     assert len(unique(kk.clusters[0:1000]))==1
     assert len(unique(kk.clusters[1000:2000]))==1
     assert len(unique(kk.clusters[2000:3000]))==1
