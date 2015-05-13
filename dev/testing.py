@@ -31,7 +31,7 @@ if __name__=='__main__':
     
     kk = KK(data, max_iterations=1000,
             use_mua_cluster=False,
-            split_every=1, split_first=1, # for debugging splits
+#             split_every=1, split_first=1, # for debugging splits
 #             split_every=1000000, split_first=1000000, # disable splitting
 #             points_for_cluster_mask=1e-100, # don't use reduced cluster masks
 #             full_step_every=1,
@@ -112,4 +112,17 @@ if __name__=='__main__':
         imshow(maskimg, origin='lower left', aspect='auto', interpolation='nearest')
         gray()
         title(cluster)
+    
+#     figure()
+#     score, score_raw, penalty = zip(*kk.score_history)
+#     subplot(221)
+#     plot(score)
+#     subplot(222)
+#     plot(score_raw)
+#     subplot(223)
+#     plot(penalty)
+#     subplot(224)
+#     plot(score)
+#     plot(score_raw)    
+    
     show()
