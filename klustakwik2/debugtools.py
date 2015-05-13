@@ -3,8 +3,24 @@ Some tools for debugging
 '''
 from numpy import *
 import time
+import subprocess
+import os
 
-__all__ = ['dump_covariance_matrices', 'dump_variable', 'dump_all']
+__all__ = ['dump_covariance_matrices', 'dump_variable', 'dump_all', 'get_kk_version']
+
+
+def get_kk_version(version):
+    curdir = os.getcwd()
+    filedir, _ = os.path.split(__file__)
+    os.chdir(filedir)
+    try:
+        version = version+'-'+subprocess.check_output(['git', 'describe', '--abbrev=8', '--dirty',
+                                                       '--always', '--tags']).strip()
+    except:
+        pass
+    os.chdir(curdir)
+    return version
+
 
 def covariance_matrix_dump_callback(kk):
     for cluster, cov in enumerate(kk.covariance):
