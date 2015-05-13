@@ -524,10 +524,7 @@ class KK(object):
         loss = deletion_loss[candidate_cluster]-self.cluster_penalty[candidate_cluster]
         delta_pen = self.cluster_penalty[candidate_cluster]
         
-#         self.log('debug', 'deletion_loss=%s\ncandidate_cluster=%d\n')
-#         
-        deleted_clusters = False
-        
+        self.comparable_clusters = self.clusters
         if loss<0:
             deleted_clusters = True
             # delete this cluster
@@ -541,14 +538,13 @@ class KK(object):
             cursic = sic[sico[candidate_cluster]:sico[candidate_cluster+1]]
             self.clusters[cursic] = self.clusters_second_best[cursic]
             self.log_p_best[cursic] = self.log_p_second_best[cursic]
-            # recompute penalties
-            self.compute_cluster_penalties()
             
-        self.comparable_clusters = self.clusters
-        if deleted_clusters:
+            self.comparable_clusters = self.clusters
+
             # at this point we have invalidated the partitions, so to make sure we don't miss
             # something, we wipe them out here
             self.reindex_clusters()
+            self.compute_cluster_penalties() # and recompute the penalties
             # we've also invalidated the second best log_p and clusters
             self.log_p_second_best = None
             self.clusters_second_best = None
