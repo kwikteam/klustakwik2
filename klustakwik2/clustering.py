@@ -91,10 +91,6 @@ class KK(object):
             setattr(self, k, v)
             if show_params:
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
-        if show_params:
-            for k in ['use_noise_cluster', 'use_mua_cluster']:
-                v = getattr(self, k, v)
-                self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
         # Assignment of special clusters
         self.num_special_clusters = 0
         self.first_gaussian_cluster = 0
@@ -112,6 +108,11 @@ class KK(object):
             self.num_special_clusters += 1
         else:
             self.mua_cluster = -2
+            
+        if show_params:
+            for k in ['use_noise_cluster', 'use_mua_cluster']:
+                v = getattr(self, k)
+                self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
 
     def register_callback(self, callback, slot='end_iteration'):
         if slot not in self.callbacks:
