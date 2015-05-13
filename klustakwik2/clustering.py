@@ -254,7 +254,8 @@ class KK(object):
             self.compute_cluster_penalties()
             self.log('debug', 'Finished compute_cluster_penalties')
             self.comparable_clusters = self.clusters
-            if recurse and self.full_step: # only delete after a full step to simplify quick steps
+            # only delete after a full step to simplify quick steps
+            if recurse and self.full_step and self.consider_cluster_deletion:
                 self.log('debug', 'Starting consider_deletion')
                 self.consider_deletion()
                 self.log('debug', 'Finished consider_deletion')

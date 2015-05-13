@@ -25,4 +25,5 @@ default_parameters = dict(
      break_fraction=0.0,
      fast_split=False,
      max_split_iterations=None,
+     consider_cluster_deletion=True,
      )
