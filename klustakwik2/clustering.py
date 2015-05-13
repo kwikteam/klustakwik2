@@ -213,16 +213,17 @@ class KK(object):
         clusters = mask_starts(self.data, num_starting_clusters, self.num_special_clusters)
         self.cluster_from(clusters)
         
-    def cluster_from(self, clusters, recurse=True):
+    def cluster_from(self, clusters, recurse=True, score_target=-inf):
         self.initialise_clusters(clusters)
-        return self.CEM(recurse=recurse)
+        return self.CEM(recurse=recurse, score_target=score_target)
     
     def prepare_for_CEM(self):
         self.full_step = True
         self.current_iteration = 0
         self.force_next_step_full = False
+        self.score_history = []
     
-    def CEM(self, recurse=True):        
+    def CEM(self, recurse=True, score_target=-inf):        
         self.prepare_for_CEM()
 
         score = score_raw = score_penalty = None
@@ -261,6 +262,7 @@ class KK(object):
             old_score_raw = score_raw
             old_score_penalty = score_penalty
             score, score_raw, score_penalty = self.compute_score()
+            self.score_history.append((score, score_raw, score_penalty))
             self.log('debug', 'Finished compute_score')
             
             clusters_changed, = (self.comparable_clusters!=self.old_clusters).nonzero()
@@ -358,6 +360,9 @@ class KK(object):
             if num_changed<self.break_fraction*self.num_spikes and last_step_full:
                 self.log('info', 'Number of points changed below break fraction, so finishing.')
                 break
+            
+            if score<score_target:
+                self.log('info', 'Reached score target, so finishing.')
         else:
             # ran out of iterations
             self.log('info', 'Number of iterations exceeded maximum %d' % self.max_iterations)
@@ -679,8 +684,14 @@ class KK(object):
                 continue
             
             with section(self, 'split_candidate'):
+                if self.max_split_iterations is not None:
+                    max_iter = self.max_split_iterations
+                else:
+                    max_iter = self.max_iterations
+                    
                 K2 = self.subset(spikes_in_cluster, name='split_candidate',
-                                 use_noise_cluster=False, use_mua_cluster=False)
+                                 use_noise_cluster=False, use_mua_cluster=False,
+                                 max_iterations=max_iter)
                 # at this point in C++ code we look for an unused cluster, but here we can just
                 # use num_clusters+1
                 self.log('debug', 'Trying to split cluster %d containing '
@@ -700,8 +711,15 @@ class KK(object):
                 clusters = randint(0, 2, size=len(spikes_in_cluster))
                 if amax(clusters)!=1:
                     continue
+                
+                if self.fast_split:
+                    score_target = unsplit_score
+                else:
+                    score_target = -inf
+                                        
                 try:
-                    split_score = K2.cluster_from(clusters, recurse=False)
+                    split_score = K2.cluster_from(clusters, recurse=False,
+                                                  score_target=score_target)
                 except PartitionError:
                     self.log('error', 'Partitioning error on split, K2.clusters = %s' % K2.clusters)
                     continue
@@ -766,5 +784,6 @@ class KK(object):
         # if we split, should make the next step full
         if did_split:
             self.force_next_step_full = True
+            self.log('info', 'Split into %d clusters' % num_clusters)
             
         return did_split

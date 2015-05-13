@@ -23,4 +23,6 @@ default_parameters = dict(
      always_split_bimodal=False,
      subset_break_fraction=0.01,
      break_fraction=0.0,
+     fast_split=False,
+     max_split_iterations=None,
      )

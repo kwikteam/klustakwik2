@@ -31,7 +31,7 @@ if __name__=='__main__':
     
     kk = KK(data, max_iterations=1000,
             use_mua_cluster=False,
-#             split_every=1, split_first=1, # for debugging splits
+            split_every=1, split_first=1, # for debugging splits
 #             split_every=1000000, split_first=1000000, # disable splitting
 #             points_for_cluster_mask=1e-100, # don't use reduced cluster masks
 #             full_step_every=1,
@@ -39,9 +39,16 @@ if __name__=='__main__':
 #             dist_thresh=15,
 #             subset_break_fraction=0.01,
 #             break_fraction=0.01,
+#             fast_split=True,
+#             max_split_iterations=10,
             )
 #     kk.register_callback(SaveCluEvery(fname, shank, every=1))
     kk.register_callback(MonitoringServer())
+
+#     def show_and_exit(kk):
+#         show()
+#         exit()
+#     kk.register_callback(show_and_exit, 'end_try_splits')
     
     def printclu_before(kk):
         global clu_here
