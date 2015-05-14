@@ -253,7 +253,6 @@ class KK(object):
             self.log('debug', 'Starting compute_cluster_penalties')
             self.compute_cluster_penalties()
             self.log('debug', 'Finished compute_cluster_penalties')
-            self.comparable_clusters = self.clusters
             # only delete after a full step to simplify quick steps
             if recurse and self.full_step and self.consider_cluster_deletion:
                 self.log('debug', 'Starting consider_deletion')
@@ -267,7 +266,7 @@ class KK(object):
             self.score_history.append((score, score_raw, score_penalty))
             self.log('debug', 'Finished compute_score')
             
-            clusters_changed, = (self.comparable_clusters!=self.old_clusters).nonzero()
+            clusters_changed, = (self.clusters!=self.old_clusters).nonzero()
             clusters_changed = array(clusters_changed, dtype=int)
             num_changed = len(clusters_changed)
             if num_changed and not self.full_step and self.full_step_every>1:
@@ -525,9 +524,7 @@ class KK(object):
         loss = deletion_loss[candidate_cluster]-self.cluster_penalty[candidate_cluster]
         delta_pen = self.cluster_penalty[candidate_cluster]
         
-        self.comparable_clusters = self.clusters
         if loss<0:
-            deleted_clusters = True
             # delete this cluster
             num_points_in_candidate = sico[candidate_cluster+1]-sico[candidate_cluster]
             self.log('info', 'Deleting cluster {cluster} ({numpoints} points): lose {lose} but '
@@ -539,12 +536,9 @@ class KK(object):
             cursic = sic[sico[candidate_cluster]:sico[candidate_cluster+1]]
             self.clusters[cursic] = self.clusters_second_best[cursic]
             self.log_p_best[cursic] = self.log_p_second_best[cursic]
-            
-            self.comparable_clusters = self.clusters
-
             # at this point we have invalidated the partitions, so to make sure we don't miss
             # something, we wipe them out here
-            self.reindex_clusters()
+            self.partition_clusters()
             self.compute_cluster_penalties() # and recompute the penalties
             # we've also invalidated the second best log_p and clusters
             self.log_p_second_best = None
