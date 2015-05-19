@@ -88,11 +88,6 @@ cpdef do_log_p_assign_computations(
         else:
             p = candidates[pp]
         
-        # to save time, only recalculate if the last one was close
-        # TODO: replace this with something that doesn't require keeping all of log_p 2D array
-#         if not full_step and clusters[p]==old_clusters[p] and log_p[cluster, p]-log_p[clusters[p], p]>dist_thresh:
-#             num_skipped += 1
-#             continue
         for i in range(num_features):
             f2cm[i+vo] = noise_mean[i]-cluster_mean[cluster, i]
         num_unmasked = uend[p]-ustart[p]

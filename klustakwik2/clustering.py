@@ -718,7 +718,7 @@ class KK(object):
                 self.run_callbacks('split_k2_2', cluster=cluster, K2=K2, split_score=split_score,
                                    unsplit_score=unsplit_score)
                 
-                if K2.num_clusters_alive==0: # todo: can this happen?
+                if K2.num_clusters_alive==0:
                     self.log('error', 'No clusters alive in K2')
                     continue
                 

@@ -75,10 +75,6 @@ def test_mask_starts():
             # cluster
             if data.unmasked_start[p]==data.unmasked_start[p2]:
                 assert cluster2==cluster
-            # TODO: test that each cluster has 'similar' masks in some sense? not sure how
-    
-    # TODO: bincount(clusters) shows that the distribution is very non-uniform - is this ok or not?
-    #print bincount(clusters)
 
     
 if __name__=='__main__':

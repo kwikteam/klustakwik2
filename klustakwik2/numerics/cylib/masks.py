@@ -5,7 +5,6 @@ from random import shuffle
 __all__ = ['sort_masks', 'mask_start_clusters']
 
 def sort_masks(raw_data):
-    # TODO: more efficient version of this function
     # step 1: sort into lexicographical order of masks
     O = raw_data.offsets
     I = raw_data.unmasked
