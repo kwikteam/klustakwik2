@@ -1,15 +1,18 @@
-# klustakwik2
+klustakwik2
+-----------
 
-## Installation instructions
+Installation instructions
+=========================
 
-Install Python using the [Anaconda distribution](http://continuum.io/downloads).
+Install Python using the `Anaconda distribution <http://continuum.io/downloads>`_.
 
 Install KlustaKwik using ``pip install klustakwik2``.
 
 On Windows, you will need a copy of MS Visual Studio Express 2008 for Python, available for free
-download [here](http://stackoverflow.com/questions/26140192/microsoft-visual-c-compiler-for-python-2-7).
+download `here <http://stackoverflow.com/questions/26140192/microsoft-visual-c-compiler-for-python-2-7>`_.
 
-## Usage
+Usage
+=====
 
 To cluster a pair of files ``name.fet.n``, ``name.fmask.n`` run the command:
 

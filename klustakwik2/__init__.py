@@ -9,7 +9,7 @@ from .monitoring import *
 from .debugtools import *
 from .default_parameters import *
 
-__version__ = '0.1.0b'
+__version__ = '0.1.0'
 __version__ = get_kk_version(__version__)
 
 log_message('info', 'KlustaKwik2 version '+__version__)

@@ -29,7 +29,7 @@ def _package_tree(pkgroot):
 
 
 curdir = op.dirname(op.realpath(__file__))
-readme = open(op.join(curdir, 'README.md')).read()
+readme = open(op.join(curdir, 'README.rst')).read()
 
 
 # Find version number from `__init__.py` without executing it.
@@ -49,7 +49,6 @@ setup(
     version=version,
     description='Clustering for high dimensional neural data',
     long_description=readme,
-    author='Kwik Team',
     url='https://github.com/kwikteam/klustakwik2',
     packages=_package_tree('klustakwik2'),
     package_dir={'klustakwik2': 'klustakwik2'},
