@@ -1,0 +1,6 @@
+include LICENSE
+include README.rst
+
+recursive-include klustakwik2/numerics/cylib *.pyx *.pyxbld
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]

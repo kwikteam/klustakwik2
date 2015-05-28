@@ -2,7 +2,7 @@
 Cluster data starting from a fet/fmask pair and outputting a clu
 
 Usage:
-    python cluster_fet_fmask_to_clu basefname shanknum [param=val, ...]
+    kk2_legacy basefname shanknum [param=val, ...]
     
 Do not put any spaces in each param=val.
 '''
@@ -13,7 +13,7 @@ from klustakwik2 import *
 import sys
 import time
 
-if __name__=='__main__':
+def main():
     script_params = default_parameters.copy()
     script_params.update(
         drop_last_n_features=0,
@@ -71,12 +71,15 @@ if __name__=='__main__':
     
     if start_from_clu is None:
         if subset_schedule is None:
-            kk.cluster(num_starting_clusters)
+            kk.cluster_mask_starts(num_starting_clusters)
         else:
             kk.cluster_with_subset_schedule(num_starting_clusters, subset_schedule)
     else:
         clusters = load_clu(start_from_clu)
         kk.cluster_from(clusters)
     clusters = kk.clusters
-    savetxt(fname+'.clu.'+shank, clusters, '%d', header=str(amax(clusters)), comments='')
+    save_clu(kk, fname, shank)
+    
+if __name__=='__main__':
+    main()
     

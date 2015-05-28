@@ -35,7 +35,14 @@ class RawSparseData(object):
     
     This is a sparse array such that the feature vector for spike i has
     non-default values at indices unmasked[offset[i]:offset[i+1]]
-    with values features[offset[i]:offset[i+1]]. masks has the same structure. 
+    with values features[offset[i]:offset[i+1]]. masks has the same structure.
+    
+    These arrays have to be normalised in the following fashion:
+    - For each channel, the features have to be first normalised between 0 and 1 (the linear
+      transformation is different for each channel).
+    - The noise mean and noise variance are computed on this normalised data.
+    - Unmasked data is where fmask>0, masked data is where fmask==0
+    - Only masked data is used for computing the noise mean and noise variance.
     '''
     def __init__(self,
                  noise_mean, noise_variance,

@@ -67,6 +67,24 @@ def add_slots(meth):
 
         
 class KK(object):
+    '''
+    Main object used for clustering data
+    
+    This documentation is temporary, just to highlight the parts of the interface that should
+    not change and can be used externally:
+    
+    * kk.special_clusters: a dict mapping special cluster names to their associated cluster index.
+    * kk.num_special_clusters: the number of special clusters. This is also the cluster index of the
+      first normal cluster.
+    * Initialisation KK(data, use_noise_cluster=True, use_mua_cluster=True, **params)
+    * Method kk.cluster_mask_starts(num_starting_clusters) will cluster from mask starts.
+    * Method kk.cluster_from(clusters) will cluster from the given array of cluster assignments.
+    * kk.clusters (after clustering) is the array of cluster assignments.
+    * Method kk.register_callback(callback, slot=None) register a callback function that will be
+      called at the given slot (see code for slot names), by default at the end of each iteration
+      of the algorithm. Callback functions are normally called as f(kk), but some slots will
+      defined additional arguments and keyword arguments.
+    '''
     def __init__(self, data, callbacks=None, name='',
                  use_noise_cluster=True, use_mua_cluster=True,
                  is_subset=False, is_copy=False,
@@ -208,13 +226,13 @@ class KK(object):
         self.clusters = kk_sub.clusters
         self.reindex_clusters()
     
-    def cluster(self, num_starting_clusters):
-        self.log('info', 'Clustering data set of %d points, %d features' % (self.data.num_spikes,
-                                                                            self.data.num_features))
+    def cluster_mask_starts(self, num_starting_clusters):
         clusters = mask_starts(self.data, num_starting_clusters, self.num_special_clusters)
         self.cluster_from(clusters)
         
     def cluster_from(self, clusters, recurse=True, score_target=-inf):
+        self.log('info', 'Clustering data set of %d points, %d features' % (self.data.num_spikes,
+                                                                            self.data.num_features))
         self.initialise_clusters(clusters)
         return self.CEM(recurse=recurse, score_target=score_target)
     

@@ -3,13 +3,13 @@ from .input_output import *
 from .mask_starts import *
 from .clustering import *
 from .logger import *
-from .scripts import *
+from .scripts.tools import *
 from .tests import run as test
 from .monitoring import *
 from .debugtools import *
 from .default_parameters import *
 
-__version__ = '0.1.0b'
+__version__ = '0.2.0dev'
 __version__ = get_kk_version(__version__)
 
 log_message('info', 'KlustaKwik2 version '+__version__)

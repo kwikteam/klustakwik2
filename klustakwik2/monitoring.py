@@ -69,51 +69,54 @@ class MonitoringServer(object):
         self.conn = None
 
     def __call__(self, kk):
-        if self.conn is None:
-            # This is kind of a hack. The multiprocessing.Listener class doesn't
-            # allow you to tell if an incoming connection has been requested
-            # without accepting that connection, which means if nothing attempts
-            # to connect it will wait forever for something to connect. What
-            # we do here is check if there is any incoming data on the
-            # underlying IP socket used internally by multiprocessing.Listener.
-            socket = self.listener._listener._socket
-            sel, _, _ = select.select([socket], [], [], 0)
-            if len(sel):
-                self.conn = self.listener.accept()
-        if self.conn is None:
-            return
-        conn = self.conn
-        global_ns = self.global_ns
-        local_ns = self.local_ns
-        paused = 1
-        while conn and paused != 0:
-            if paused >= 0 and not conn.poll():
+        try:
+            if self.conn is None:
+                # This is kind of a hack. The multiprocessing.Listener class doesn't
+                # allow you to tell if an incoming connection has been requested
+                # without accepting that connection, which means if nothing attempts
+                # to connect it will wait forever for something to connect. What
+                # we do here is check if there is any incoming data on the
+                # underlying IP socket used internally by multiprocessing.Listener.
+                socket = self.listener._listener._socket
+                sel, _, _ = select.select([socket], [], [], 0)
+                if len(sel):
+                    self.conn = self.listener.accept()
+            if self.conn is None:
                 return
-            try:
-                job = conn.recv()
-            except:
-                self.conn = None
-                break
-            jobtype, jobargs = job
-            if paused == 1: paused = 0
-            try:
-                result = None
-                if jobtype == 'exec':
-                    exec jobargs in global_ns, local_ns
-                elif jobtype == 'eval':
-                    result = eval(jobargs, global_ns, local_ns)
-                elif jobtype == 'setvar':
-                    varname, varval = jobargs
-                    local_ns[varname] = varval
-                elif jobtype == 'pause':
-                    paused = -1
-                elif jobtype == 'go':
-                    paused = 0
-            except Exception, e:
-                # if it raised an exception, we return that exception and the
-                # client can then raise it.
-                result = e
-            conn.send(result)
+            conn = self.conn
+            global_ns = self.global_ns
+            local_ns = self.local_ns
+            paused = 1
+            while conn and paused != 0:
+                if paused >= 0 and not conn.poll():
+                    return
+                try:
+                    job = conn.recv()
+                except:
+                    self.conn = None
+                    break
+                jobtype, jobargs = job
+                if paused == 1: paused = 0
+                try:
+                    result = None
+                    if jobtype == 'exec':
+                        exec jobargs in global_ns, local_ns
+                    elif jobtype == 'eval':
+                        result = eval(jobargs, global_ns, local_ns)
+                    elif jobtype == 'setvar':
+                        varname, varval = jobargs
+                        local_ns[varname] = varval
+                    elif jobtype == 'pause':
+                        paused = -1
+                    elif jobtype == 'go':
+                        paused = 0
+                except Exception, e:
+                    # if it raised an exception, we return that exception and the
+                    # client can then raise it.
+                    result = e
+                conn.send(result)
+        except IOError:
+            self.conn = None
 
 
 class MonitoringClient(object):
