@@ -71,7 +71,7 @@ def main():
     
     if start_from_clu is None:
         if subset_schedule is None:
-            kk.cluster(num_starting_clusters)
+            kk.cluster_mask_starts(num_starting_clusters)
         else:
             kk.cluster_with_subset_schedule(num_starting_clusters, subset_schedule)
     else:
