@@ -4,7 +4,8 @@ klustakwik2
 Installation instructions
 =========================
 
-Install Python using the `Anaconda distribution <http://continuum.io/downloads>`_.
+Install Python 2.7 using the `Anaconda distribution <http://continuum.io/downloads>`_. You will
+need to install the packages numpy, scipy, cython and nose.
 
 Install KlustaKwik using ``pip install klustakwik2``.
 
@@ -18,7 +19,8 @@ To cluster a pair of files ``name.fet.n``, ``name.fmask.n`` run the command:
 
     kk2_legacy name n
     
-This will generate a ``name.klg.n`` and ``name.clu.n`` file.
+This will generate a ``name.klg.n`` and ``name.clu.n`` file. Note that the first time you run it,
+it will generate a whole lot of warnings and compiler output: ignore this, it is normal.
 
 You can specify additional options to this script. The major ones are explained below:
 
