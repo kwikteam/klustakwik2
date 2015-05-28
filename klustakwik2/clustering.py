@@ -11,7 +11,8 @@ from .mask_starts import mask_starts
 from .linear_algebra import BlockPlusDiagonalMatrix
 from .default_parameters import default_parameters
 
-from .numerics import (accumulate_cluster_mask_sum, compute_cluster_means, compute_covariance_matrices,
+from .numerics import (accumulate_cluster_mask_sum, compute_cluster_mean,
+                       compute_covariance_matrix,
                        compute_log_p_and_assign, compute_penalties)
 
 import time
@@ -388,7 +389,8 @@ class KK(object):
         # matrices.
         num_clusters = self.num_clusters_alive
         num_features = self.num_features
-        
+        num_cluster_members = self.num_cluster_members
+
         # Compute the sum of 
         cluster_mask_sum = zeros((num_clusters, num_features))
         # Use efficient version
@@ -397,46 +399,40 @@ class KK(object):
         
         self.run_callbacks('cluster_mask_sum', cluster_mask_sum=cluster_mask_sum)
         
-        # Compute the masked and unmasked sets
-        self.cluster_masked_features = []
-        self.cluster_unmasked_features = []
-        self.covariance = []
-        for cluster in xrange(num_clusters):
+        #for cluster in xrange(num_clusters):
+        for cluster in xrange(2, num_clusters):
+            # Compute the masked and unmasked sets
             curmask = cluster_mask_sum[cluster, :]
             unmasked, = (curmask>=self.points_for_cluster_mask).nonzero()
             masked, = (curmask<self.points_for_cluster_mask).nonzero()
             unmasked = array(unmasked, dtype=int)
             masked = array(masked, dtype=int)
-            self.cluster_masked_features.append(masked)
-            self.cluster_unmasked_features.append(unmasked)
-            self.covariance.append(BlockPlusDiagonalMatrix(masked, unmasked))
+            cov = BlockPlusDiagonalMatrix(masked, unmasked)
 
-        ########### M step ########################################################
-        num_cluster_members = self.num_cluster_members
-        num_clusters = self.num_clusters_alive
-        num_features = self.num_features
+            ########### M step ########################################################
         
-        # Normalize by total number of points to give class weight
-        denom = self.num_spikes+self.prior_point*(num_clusters-self.num_special_clusters)
-        if self.use_noise_cluster:
-            denom += self.noise_point
-        if self.use_mua_cluster:
-            denom += self.mua_point
-        denom = float(denom)
-        self.weight = weight = (num_cluster_members+self.prior_point)/denom
-        # different calculation for special clusters
-        if self.use_noise_cluster:
-            weight[self.noise_cluster] = (num_cluster_members[self.noise_cluster]+self.noise_point)/denom
-        if self.use_mua_cluster:
-            weight[self.mua_cluster] = (num_cluster_members[self.mua_cluster]+self.mua_point)/denom
+            # Normalize by total number of points to give class weight
+            denom = self.num_spikes+self.prior_point*(num_clusters-self.num_special_clusters)
+            if self.use_noise_cluster:
+                denom += self.noise_point
+            if self.use_mua_cluster:
+                denom += self.mua_point
+            denom = float(denom)
+            if cluster==self.noise_cluster:
+                weight = (num_cluster_members[self.noise_cluster]+self.noise_point)/denom
+            elif cluster==self.mua_cluster:
+                weight = (num_cluster_members[self.mua_cluster]+self.mua_point)/denom
+            else:
+                weight = (num_cluster_members[cluster]+self.prior_point)/denom
         
-        # Compute means for each cluster
-        # Note that we do this densely at the moment, might want to switch
-        # that to a sparse structure later
-        self.cluster_mean = compute_cluster_means(self)
-        
-        # Compute covariance matrices
-        compute_covariance_matrices(self)
+            # Compute means for each cluster
+            # Note that we do this densely at the moment, might want to switch
+            # that to a sparse structure later
+            cluster_mean = compute_cluster_mean(self, cluster)        
+            # Compute covariance matrices
+            compute_covariance_matrix(self, cluster, cluster_mean, cov)
+            
+            exit()
 
         ########### EC steps ######################################################
         cluster_start = self.num_special_clusters
