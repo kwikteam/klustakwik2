@@ -12,7 +12,7 @@ from .linear_algebra import BlockPlusDiagonalMatrix
 from .default_parameters import default_parameters
 
 from .numerics import (accumulate_cluster_mask_sum, compute_cluster_means, compute_covariance_matrices,
-                       compute_log_p_and_assign)
+                       compute_log_p_and_assign, compute_penalties)
 
 import time
 
@@ -502,26 +502,11 @@ class KK(object):
         self.partition_clusters()
     
     @add_slots
-    def compute_cluster_penalties(self):
-        num_cluster_members = self.num_cluster_members
-        num_clusters = self.num_clusters_alive
-        self.cluster_penalty = cluster_penalty = zeros(num_clusters)
-        sic = self.spikes_in_cluster
-        sico = self.spikes_in_cluster_offset
-        ustart = self.data.unmasked_start
-        uend = self.data.unmasked_end
-        penalty_k = self.penalty_k
-        penalty_k_log_n = self.penalty_k_log_n
-        float_num_unmasked = self.data.float_num_unmasked
-        for cluster in xrange(num_clusters):
-            curspikes = sic[sico[cluster]:sico[cluster+1]]
-            num_spikes = len(curspikes)
-            if num_spikes>0:
-                num_unmasked = float_num_unmasked[curspikes]
-                num_params = sum(num_unmasked*(num_unmasked+1)/2+num_unmasked+1)
-                mean_params = float(num_params)/num_spikes
-                cluster_penalty[cluster] = (penalty_k*mean_params*2+
-                                            penalty_k_log_n*mean_params*log(self.num_spikes)/2)
+    def compute_cluster_penalties(self, clusters=None):
+        cluster_penalties = compute_penalties(self, clusters)
+        if clusters is None:
+            self.cluster_penalty = cluster_penalties
+        return cluster_penalties
     
     @add_slots    
     def consider_deletion(self):
@@ -534,22 +519,34 @@ class KK(object):
         sico = self.spikes_in_cluster_offset
         log_p_best = self.log_p_best
         log_p_second_best = self.log_p_second_best
-        
+
         deletion_loss = zeros(num_clusters)
         I = arange(self.num_spikes)
         add.at(deletion_loss, self.clusters, log_p_second_best-log_p_best)
-        candidate_cluster = self.num_special_clusters+argmin((deletion_loss-self.cluster_penalty)[self.num_special_clusters:])
-        loss = deletion_loss[candidate_cluster]-self.cluster_penalty[candidate_cluster]
-        delta_pen = self.cluster_penalty[candidate_cluster]
-        
-        if loss<0:
+
+        score, score_raw, score_penalty = self.compute_score()
+        candidate_cluster = -1
+        improvement = -inf
+        for cluster in xrange(self.num_special_clusters, num_clusters):
+            new_clusters = self.clusters.copy()
+            # reassign points
+            cursic = sic[sico[cluster]:sico[cluster+1]]
+            new_clusters[cursic] = self.clusters_second_best[cursic]
+            # compute penalties if we reassigned this
+            penalties = self.compute_cluster_penalties(new_clusters)
+            new_score = score_raw+deletion_loss[cluster]+sum(penalties)
+            cur_improvement = score-new_score # we want improvement to be a positive value
+            if cur_improvement>improvement:
+                improvement = cur_improvement
+                candidate_cluster = cluster
+
+        if improvement>0:
             # delete this cluster
             num_points_in_candidate = sico[candidate_cluster+1]-sico[candidate_cluster]
-            self.log('info', 'Deleting cluster {cluster} ({numpoints} points): lose {lose} but '
-                             'gain {gain}'.format(cluster=candidate_cluster,
-                                                  numpoints=num_points_in_candidate,
-                                                  lose=deletion_loss[candidate_cluster],
-                                                  gain=delta_pen))
+            self.log('info', 'Deleting cluster {cluster} ({numpoints} points): improves score '
+                             'by {improvement}'.format(cluster=candidate_cluster,
+                                                       numpoints=num_points_in_candidate,
+                                                       improvement=improvement))
             # reassign points
             cursic = sic[sico[candidate_cluster]:sico[candidate_cluster+1]]
             self.clusters[cursic] = self.clusters_second_best[cursic]
@@ -610,25 +607,32 @@ class KK(object):
         self._total_clusters = total_clusters
         self.partition_clusters()
         
-    def partition_clusters(self):
+    def partition_clusters(self, clusters=None):
+        if clusters is None:
+            clusters = self.clusters
+            assign_to_self = True
+        else:
+            assign_to_self = False
         try:
             if self.num_special_clusters>0:
-                self.num_cluster_members = num_cluster_members = array(bincount(self.clusters,
-                                                                                minlength=self.num_special_clusters),
-                                                                       dtype=int)
+                num_cluster_members = array(bincount(clusters, minlength=self.num_special_clusters), dtype=int)
             else:
-                self.num_cluster_members = num_cluster_members = array(bincount(self.clusters), dtype=int)
+                num_cluster_members = array(bincount(clusters), dtype=int)
         except ValueError:
             raise PartitionError
-        I = array(argsort(self.clusters), dtype=int)
-        y = self.clusters[I]
+        I = array(argsort(clusters), dtype=int)
+        y = clusters[I]
         n = amax(y)
         if n<self.num_special_clusters-1:
             n = self.num_special_clusters-1
         n += 2
         J = searchsorted(y, arange(n))
-        self.spikes_in_cluster = I
-        self.spikes_in_cluster_offset = J
+        if assign_to_self:
+            self.num_cluster_members = num_cluster_members
+            self.spikes_in_cluster = I
+            self.spikes_in_cluster_offset = J
+        else:
+            return I, J, num_cluster_members
     
     def invalidate_partitions(self):
         self.num_cluster_members = None

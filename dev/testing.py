@@ -41,7 +41,7 @@ if __name__=='__main__':
 #             break_fraction=0.01,
 #             fast_split=True,
 #             max_split_iterations=10,
-#             consider_cluster_deletion=False,
+            consider_cluster_deletion=True,
             )
 #     kk.register_callback(SaveCluEvery(fname, shank, every=1))
     kk.register_callback(MonitoringServer())
