@@ -234,16 +234,16 @@ class KK(object):
         self.log('info', 'Clustering data set of %d points, %d features' % (self.data.num_spikes,
                                                                             self.data.num_features))
         self.initialise_clusters(clusters)
-        return self.CEM(recurse=recurse, score_target=score_target)
+        return self.iterate(recurse=recurse, score_target=score_target)
     
-    def prepare_for_CEM(self):
+    def prepare_for_iterate(self):
         self.full_step = True
         self.current_iteration = 0
         self.force_next_step_full = False
         self.score_history = []
     
-    def CEM(self, recurse=True, score_target=-inf):        
-        self.prepare_for_CEM()
+    def iterate(self, recurse=True, score_target=-inf):        
+        self.prepare_for_iterate()
 
         score = score_raw = score_penalty = None
         
@@ -262,27 +262,16 @@ class KK(object):
                 self.log('debug', 'This step is a full step')
             else:
                 self.log('debug', 'This step is a quick step')
-            self.log('debug', 'Starting M-step')
-            self.M_step()
-            self.log('debug', 'Finished M-step')
-            self.log('debug', 'Starting EC-steps')
-            self.EC_steps()
-            self.log('debug', 'Finished EC-steps')
-            self.log('debug', 'Starting compute_cluster_penalties')
+            self.MEC_steps()
             self.compute_cluster_penalties()
-            self.log('debug', 'Finished compute_cluster_penalties')
             # only delete after a full step to simplify quick steps
             if recurse and self.full_step and self.consider_cluster_deletion:
-                self.log('debug', 'Starting consider_deletion')
                 self.consider_deletion()
-                self.log('debug', 'Finished consider_deletion')
-            self.log('debug', 'Starting compute_score')
             old_score = score
             old_score_raw = score_raw
             old_score_penalty = score_penalty
             score, score_raw, score_penalty = self.compute_score()
             self.score_history.append((score, score_raw, score_penalty))
-            self.log('debug', 'Finished compute_score')
             
             clusters_changed, = (self.clusters!=self.old_clusters).nonzero()
             clusters_changed = array(clusters_changed, dtype=int)
@@ -387,15 +376,42 @@ class KK(object):
             self.log('info', 'Number of iterations exceeded maximum %d' % self.max_iterations)
 
         return score
-
+    
     @add_slots
-    def M_step(self):
+    def MEC_steps(self, only_evaluate_current_clusters=False):
         # eliminate any clusters with 0 members, compute the list of spikes
         # in each cluster, compute the cluster masks and allocate space for
         # covariance matrices
         self.reindex_clusters()
-        self.compute_cluster_masks()
+        # Computes the masked and unmasked indices for each cluster based on the
+        # masks for each point in that cluster. Allocates space for covariance
+        # matrices.
+        num_clusters = self.num_clusters_alive
+        num_features = self.num_features
+        
+        # Compute the sum of 
+        cluster_mask_sum = zeros((num_clusters, num_features))
+        # Use efficient version
+        accumulate_cluster_mask_sum(self, cluster_mask_sum)
+        cluster_mask_sum[:self.num_special_clusters, :] = -1 # ensure that special clusters are masked
+        
+        self.run_callbacks('cluster_mask_sum', cluster_mask_sum=cluster_mask_sum)
+        
+        # Compute the masked and unmasked sets
+        self.cluster_masked_features = []
+        self.cluster_unmasked_features = []
+        self.covariance = []
+        for cluster in xrange(num_clusters):
+            curmask = cluster_mask_sum[cluster, :]
+            unmasked, = (curmask>=self.points_for_cluster_mask).nonzero()
+            masked, = (curmask<self.points_for_cluster_mask).nonzero()
+            unmasked = array(unmasked, dtype=int)
+            masked = array(masked, dtype=int)
+            self.cluster_masked_features.append(masked)
+            self.cluster_unmasked_features.append(unmasked)
+            self.covariance.append(BlockPlusDiagonalMatrix(masked, unmasked))
 
+        ########### M step ########################################################
         num_cluster_members = self.num_cluster_members
         num_clusters = self.num_clusters_alive
         num_features = self.num_features
@@ -422,9 +438,7 @@ class KK(object):
         # Compute covariance matrices
         compute_covariance_matrices(self)
 
-                    
-    @add_slots    
-    def EC_steps(self, only_evaluate_current_clusters=False):
+        ########### EC steps ######################################################
         cluster_start = self.num_special_clusters
         num_spikes = self.num_spikes
         num_clusters = self.num_clusters_alive
@@ -644,38 +658,6 @@ class KK(object):
         sico = self.spikes_in_cluster_offset
         return sic[sico[cluster]:sico[cluster+1]]
         
-    @add_slots    
-    def compute_cluster_masks(self):
-        '''
-        Computes the masked and unmasked indices for each cluster based on the
-        masks for each point in that cluster. Allocates space for covariance
-        matrices.
-        '''
-        num_clusters = self.num_clusters_alive
-        num_features = self.num_features
-        
-        # Compute the sum of 
-        cluster_mask_sum = zeros((num_clusters, num_features))
-        # Use efficient version
-        accumulate_cluster_mask_sum(self, cluster_mask_sum)
-        cluster_mask_sum[:self.num_special_clusters, :] = -1 # ensure that special clusters are masked
-        
-        self.run_callbacks('cluster_mask_sum', cluster_mask_sum=cluster_mask_sum)
-        
-        # Compute the masked and unmasked sets
-        self.cluster_masked_features = []
-        self.cluster_unmasked_features = []
-        self.covariance = []
-        for cluster in xrange(num_clusters):
-            curmask = cluster_mask_sum[cluster, :]
-            unmasked, = (curmask>=self.points_for_cluster_mask).nonzero()
-            masked, = (curmask<self.points_for_cluster_mask).nonzero()
-            unmasked = array(unmasked, dtype=int)
-            masked = array(masked, dtype=int)
-            self.cluster_masked_features.append(masked)
-            self.cluster_unmasked_features.append(unmasked)
-            self.covariance.append(BlockPlusDiagonalMatrix(masked, unmasked))
-            
     @add_slots
     def try_splits(self):
         did_split = False        
@@ -768,9 +750,8 @@ class KK(object):
                 
                 if score_ref is None:
                     K3.initialise_clusters(clusters)
-                    K3.prepare_for_CEM()
-                    K3.M_step()
-                    K3.EC_steps(only_evaluate_current_clusters=True)
+                    K3.prepare_for_iterate()
+                    K3.MEC_steps(only_evaluate_current_clusters=True)
                     K3.compute_cluster_penalties()
                     score_ref, _, _ = K3.compute_score()
                 
@@ -778,9 +759,8 @@ class KK(object):
                 clusters[spikes_in_cluster[I1]] = num_clusters # next available cluster
     
                 K3.initialise_clusters(clusters)
-                K3.prepare_for_CEM()
-                K3.M_step()
-                K3.EC_steps(only_evaluate_current_clusters=True)
+                K3.prepare_for_iterate()
+                K3.MEC_steps(only_evaluate_current_clusters=True)
                 K3.compute_cluster_penalties()
                 score_new, _, _ = K3.compute_score()
             
