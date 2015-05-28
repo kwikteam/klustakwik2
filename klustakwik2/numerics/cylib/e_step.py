@@ -4,14 +4,13 @@ import multiprocessing
 
 __all__ = ['compute_log_p_and_assign']
 
-def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol,
+def compute_log_p_and_assign(kk, cluster, weight, inv_cov_diag, log_root_det, chol, cluster_mean,
                              only_evaluate_current_clusters):
     num_clusters = len(kk.num_cluster_members)
     num_features = kk.num_features
     num_spikes = kk.num_spikes
 
-    weight = kk.weight
-    log_addition = log_root_det-log(weight[cluster])+0.5*log(2*pi)*num_features
+    log_addition = log_root_det-log(weight)+0.5*log(2*pi)*num_features
 
     data = kk.data
     unmasked = data.unmasked
@@ -26,7 +25,6 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol,
     log_p_second_best = kk.log_p_second_best
     noise_mean = data.noise_mean
     noise_variance = data.noise_variance
-    cluster_mean = kk.cluster_mean
     correction_terms = data.correction_terms
     
     clusters = kk.clusters
