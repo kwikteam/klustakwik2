@@ -100,7 +100,7 @@ class MonitoringServer(object):
                 try:
                     result = None
                     if jobtype == 'exec':
-                        exec jobargs in global_ns, local_ns
+                        exec(jobargs, global_ns, local_ns)
                     elif jobtype == 'eval':
                         result = eval(jobargs, global_ns, local_ns)
                     elif jobtype == 'setvar':
@@ -110,7 +110,7 @@ class MonitoringServer(object):
                         paused = -1
                     elif jobtype == 'go':
                         paused = 0
-                except Exception, e:
+                except Exception as e:
                     # if it raised an exception, we return that exception and the
                     # client can then raise it.
                     result = e

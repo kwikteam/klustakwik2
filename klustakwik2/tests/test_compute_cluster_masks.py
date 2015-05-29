@@ -9,7 +9,7 @@ from numpy.random import randint, rand
 # versions
 from klustakwik2.clustering import accumulate_cluster_mask_sum
 
-from test_io import generate_simple_test_raw_data
+from .test_io import generate_simple_test_raw_data
 
 @nottest
 def generate_simple_test_kk(**params):

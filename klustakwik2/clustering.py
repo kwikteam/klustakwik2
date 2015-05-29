@@ -1,7 +1,7 @@
 from numpy import *
 from numpy.linalg import LinAlgError
 from numpy.random import randint
-from itertools import izip
+
 import hashlib
 from random import shuffle
 
@@ -101,11 +101,11 @@ class KK(object):
         show_params = name=='' and not is_subset and not is_copy
         self.params = params
         actual_params = default_parameters.copy()
-        for k, v in params.iteritems():
+        for k, v in params.items():
             if k not in default_parameters:
                 raise ValueError("There is no parameter "+k)
             actual_params[k] = v
-        for k, v in actual_params.iteritems():
+        for k, v in actual_params.items():
             setattr(self, k, v)
             if show_params:
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
@@ -293,7 +293,7 @@ class KK(object):
                 max_quick_step_candidates = min(self.max_quick_step_candidates,
                     self.max_quick_step_candidates_fraction*self.num_spikes*self.num_clusters_alive)
                 with section(self, 'quick_step_union'):
-                    for cluster, candidates in self.quick_step_candidates.items():
+                    for cluster, candidates in list(self.quick_step_candidates.items()):
                         candidates = union1d(candidates, clusters_changed)
                         self.quick_step_candidates[cluster] = candidates
                         num_candidates += len(candidates)
@@ -458,7 +458,7 @@ class KK(object):
         
         if only_evaluate_current_clusters:
             self.quick_step_candidates = dict()
-            for cluster in xrange(num_clusters):
+            for cluster in range(num_clusters):
                 self.quick_step_candidates[cluster] = self.get_spikes_in_cluster(cluster)
             self.collect_candidates = False
         elif self.full_step:
@@ -467,7 +467,7 @@ class KK(object):
         else:
             self.collect_candidates = False
         
-        for cluster in xrange(cluster_start, num_clusters):
+        for cluster in range(cluster_start, num_clusters):
             cov = self.covariance[cluster]
             try:
                 chol = cov.cholesky()
@@ -482,7 +482,7 @@ class KK(object):
             # compute diagonal of inverse of cov matrix
             inv_cov_diag = zeros(num_features)
             basis_vector = zeros(num_features)
-            for i in xrange(num_features):
+            for i in range(num_features):
                 basis_vector[i] = 1.0
                 root = chol.trisolve(basis_vector)
                 inv_cov_diag[i] = sum(root**2)
@@ -527,7 +527,7 @@ class KK(object):
         score, score_raw, score_penalty = self.compute_score()
         candidate_cluster = -1
         improvement = -inf
-        for cluster in xrange(self.num_special_clusters, num_clusters):
+        for cluster in range(self.num_special_clusters, num_clusters):
             new_clusters = self.clusters.copy()
             # reassign points
             cursic = sic[sico[cluster]:sico[cluster+1]]
@@ -666,7 +666,7 @@ class KK(object):
         self.cluster_masked_features = []
         self.cluster_unmasked_features = []
         self.covariance = []
-        for cluster in xrange(num_clusters):
+        for cluster in range(num_clusters):
             curmask = cluster_mask_sum[cluster, :]
             unmasked, = (curmask>=self.points_for_cluster_mask).nonzero()
             masked, = (curmask<self.points_for_cluster_mask).nonzero()
@@ -687,7 +687,7 @@ class KK(object):
 
         self.reindex_clusters()
         
-        for cluster in xrange(self.num_special_clusters, num_clusters):
+        for cluster in range(self.num_special_clusters, num_clusters):
             if num_clusters>=self.max_possible_clusters:
                 self.log('info', 'No more splitting, already at maximum number of '
                                  'clusters' % self.max_possible_clusters)

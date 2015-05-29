@@ -36,7 +36,7 @@ def compute_covariance_matrices(kk):
     num_clusters = len(num_cluster_members)
     num_features = kk.num_features
 
-    for cluster in xrange(kk.first_gaussian_cluster, num_clusters):
+    for cluster in range(kk.first_gaussian_cluster, num_clusters):
         cov = kk.covariance[cluster]
         block = cov.block
         block_diagonal = get_diagonal(block)

@@ -38,7 +38,7 @@ def generate_synthetic_data(num_features, spikes_per_centre, centres, save_to_fe
         s = array(s, dtype=float)
         fmc = array(fmc, dtype=float)
         fms = array(fms, dtype=float)
-        for i in xrange(spikes_per_centre):
+        for i in range(spikes_per_centre):
             f = randn(num_features)*s+c
             fm = clip(randn(num_features)*fms+fmc, 0, 1)
             if save_to_fet is not None:

@@ -5,7 +5,7 @@ from nose import with_setup
 from nose.tools import nottest
 from numpy.random import randint, rand
 
-from test_mask_starts import generate_multimask_test_data
+from .test_mask_starts import generate_multimask_test_data
 
 def test_partitioning():
     # actually we only need to generate some arbitrary data, the values don't matter much

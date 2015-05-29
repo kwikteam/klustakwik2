@@ -1,5 +1,5 @@
 from numpy import *
-from itertools import izip
+
 import time
 
 from .data import RawSparseData
@@ -30,7 +30,7 @@ def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=
     vmax = ones(num_features)*-inf
     total_unmasked_features = 0
     num_spikes = 0
-    for fetline, fmaskline in izip(fet_file, fmask_file):
+    for fetline, fmaskline in zip(fet_file, fmask_file):
         vals = fromstring(fetline, dtype=float, sep=' ')[use_features]
         fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')[use_features]
         inds, = (fmaskvals>0).nonzero()
@@ -55,7 +55,7 @@ def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=
     all_unmasked = zeros(total_unmasked_features, dtype=int)
     offsets = zeros(num_spikes+1, dtype=int)
     curoff = 0
-    for i, (fetline, fmaskline) in enumerate(izip(fet_file, fmask_file)):
+    for i, (fetline, fmaskline) in enumerate(zip(fet_file, fmask_file)):
         fetvals = (fromstring(fetline, dtype=float, sep=' ')[use_features]-vmin)/vdiff
         fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')[use_features]
         inds, = (fmaskvals>0).nonzero()

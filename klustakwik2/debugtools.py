@@ -43,7 +43,7 @@ class DumpVariableCallback(object):
             self.varcode = varname
         self.suffix = suffix
         self.ns = {}
-        exec 'from numpy import *' in self.ns
+        exec('from numpy import *', self.ns)
     def __call__(self, kk):
         self.ns['kk'] = kk
         obj = eval(self.varcode, self.ns)
@@ -66,7 +66,7 @@ class DumpAllCallback(object):
         kk.log('debug', 'Dumping variables from slot '+self.slot, suffix=self.slot)
         for i, arg in enumerate(args):
             self.dump_var(kk, 'arg'+str(i), arg)
-        for k, v in kwds.iteritems():
+        for k, v in kwds.items():
             self.dump_var(kk, k, v)
     def dump_var(self, kk, name, val):
         msg = name+' = '

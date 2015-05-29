@@ -76,7 +76,7 @@ def test_load_fet_fmask():
     assert amax(data.features)==1
     assert len(data.offsets)==5
     loaded_fet = zeros_like(fet)
-    for i in xrange(4):
+    for i in range(4):
         data_u = data.unmasked[data.offsets[i]:data.offsets[i+1]]
         true_u, = fmask[i, :].nonzero()
         assert_array_equal(data_u, true_u)
@@ -94,7 +94,7 @@ def test_load_fet_fmask():
     assert data.num_features==5
     assert data.num_masks==3
 
-    for i in xrange(4):
+    for i in range(4):
         data_u = data.unmasked[data.unmasked_start[i]:data.unmasked_end[i]]
         true_u, = fmask[i, :].nonzero()
         assert_array_equal(data_u, true_u)

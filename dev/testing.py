@@ -1,7 +1,7 @@
 from klustakwik2 import *
 from pylab import *
 import time
-import cPickle as pickle
+import pickle as pickle
 import os
 from random import sample
 import shutil
@@ -18,16 +18,16 @@ if __name__=='__main__':
 #     if False:
         start_time = time.time()
         data = pickle.load(open(fname+'.pickle', 'rb'))
-        print 'load from pickle:', time.time()-start_time
+        print('load from pickle:', time.time()-start_time)
     else:
         start_time = time.time()
         raw_data = load_fet_fmask_to_raw(fname, shank, drop_last_n_features=1)
-        print 'load_fet_fmask_to_raw:', time.time()-start_time
+        print('load_fet_fmask_to_raw:', time.time()-start_time)
         data = raw_data.to_sparse_data()
         pickle.dump(data, open(fname+'.pickle', 'wb'), -1)
         
-    print 'Number of spikes:', data.num_spikes
-    print 'Number of unique masks:', data.num_masks
+    print('Number of spikes:', data.num_spikes)
+    print('Number of unique masks:', data.num_masks)
     
     kk = KK(data, max_iterations=1000,
             use_mua_cluster=False,
@@ -56,9 +56,9 @@ if __name__=='__main__':
         clu_here = kk.clusters.copy()
     def printclu_after(kk):
         changed = (kk.clusters!=clu_here).nonzero()[0]
-        print 'Changed:', changed
-        print kk.old_clusters[changed]
-        print kk.clusters[changed]
+        print('Changed:', changed)
+        print(kk.old_clusters[changed])
+        print(kk.clusters[changed])
 #     kk.register_callback(printclu_before, 'start_EC_steps')
 #     kk.register_callback(printclu_after, 'end_EC_steps')
     
@@ -67,11 +67,11 @@ if __name__=='__main__':
         shutil.copy(fname+'.clu.'+str(shank)+'.flipflop', fname+'.clu.'+str(shank))
 #     if os.path.exists(fname+'.clu.'+str(shank)):
     if False:
-        print 'Loading clusters from file'
+        print('Loading clusters from file')
         clusters = loadtxt(fname+'.clu.'+str(shank), skiprows=1, dtype=int)
         kk.cluster_from(clusters)
     else:
-        print 'Generating clusters from scratch'
+        print('Generating clusters from scratch')
         #kk.cluster_with_subset_schedule(100, [0.99, 1.0])
         kk.cluster_mask_starts(100)
     
@@ -94,7 +94,7 @@ if __name__=='__main__':
     
     num_to_show = 200
      
-    for cluster in xrange(kk.num_clusters_alive):
+    for cluster in range(kk.num_clusters_alive):
         if cluster % 4 == 0:
             figure()
         maskimg = []

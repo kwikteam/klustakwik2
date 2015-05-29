@@ -10,7 +10,7 @@ def generate_multimask_test_data(num_masks, num_points, num_features):
     # step 1: generate masks
     found = set()
     all_masks = []
-    for i in xrange(num_masks):
+    for i in range(num_masks):
         while True:
             u, = randint(2, size=num_features).nonzero()
             h = u.tostring()
@@ -26,7 +26,7 @@ def generate_multimask_test_data(num_masks, num_points, num_features):
     unmasked = []
     n = 0
     offsets = [n]
-    for i in xrange(num_points):
+    for i in range(num_points):
         u = all_masks[randint(num_masks)]
         fet.append(rand(len(u)))
         fmask.append(0.5+0.5*rand(len(u)))
@@ -65,10 +65,10 @@ def test_mask_starts():
     assert 45<amax(clusters)<50 # a bit of leeway because it's random
         
     # Basic sanity check on the generated clusters
-    for p in xrange(len(clusters)):
+    for p in range(len(clusters)):
         cluster = clusters[p]
         unmasked = data.unmasked[data.unmasked_start[p]:data.unmasked_end[p]]
-        for p2 in xrange(len(clusters)):
+        for p2 in range(len(clusters)):
             cluster2 = clusters[p2]
             #unmasked2 = data.unmasked[data.unmasked_start[p2]:data.unmasked_end[p2]]
             # this says that if the masks are the same they ought to be assigned to the same

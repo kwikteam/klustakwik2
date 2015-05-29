@@ -40,7 +40,7 @@ def test_cholesky_trisolve():
     # test compute diagonal of inverse of cov matrix used in E-step
     inv_cov_diag = zeros(len(x))
     basis_vector = zeros(len(x))
-    for i in xrange(len(x)):
+    for i in range(len(x)):
         basis_vector[i] = 1.0
         root = chol.trisolve(basis_vector)
         inv_cov_diag[i] = sum(root**2)

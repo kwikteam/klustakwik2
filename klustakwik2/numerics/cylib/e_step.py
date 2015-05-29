@@ -71,7 +71,7 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol,
             kk.max_quick_step_candidates_fraction*kk.num_spikes*kk.num_clusters_alive)
         candidates, = (cluster_log_p-kk.old_log_p_best<=kk.dist_thresh).nonzero()
         kk.quick_step_candidates[cluster] = array(candidates, dtype=int)
-        num_candidates = sum(len(v) for v in kk.quick_step_candidates.itervalues())
+        num_candidates = sum(len(v) for v in kk.quick_step_candidates.values())
         if num_candidates>max_quick_step_candidates:
             kk.collect_candidates = False
             kk.quick_step_candidates.clear()
