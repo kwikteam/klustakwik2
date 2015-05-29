@@ -1,19 +1,18 @@
 from klustakwik2 import *
 from pylab import *
 import time
-import pickle as pickle
 import os
+from six.moves import range, cPickle as pickle
 from random import sample
 import shutil
-
 if __name__=='__main__':
-    
+
     fname, shank = '../temp/testsmallish', 4
     #fname, shank = '../temp/20141009_all_AdjGraph', 1
-    
+
     log_to_file(fname+'.klg.'+str(shank), 'debug')
     log_suppress_hierarchy('klustakwik', inclusive=False)
-    
+
     if os.path.exists(fname+'.pickle'):
 #     if False:
         start_time = time.time()
@@ -25,10 +24,10 @@ if __name__=='__main__':
         print('load_fet_fmask_to_raw:', time.time()-start_time)
         data = raw_data.to_sparse_data()
         pickle.dump(data, open(fname+'.pickle', 'wb'), -1)
-        
+
     print('Number of spikes:', data.num_spikes)
     print('Number of unique masks:', data.num_masks)
-    
+
     kk = KK(data, max_iterations=1000,
             use_mua_cluster=False,
 #             split_every=1, split_first=1, # for debugging splits
@@ -50,7 +49,7 @@ if __name__=='__main__':
 #         show()
 #         exit()
 #     kk.register_callback(show_and_exit, 'end_try_splits')
-    
+
     def printclu_before(kk):
         global clu_here
         clu_here = kk.clusters.copy()
@@ -61,7 +60,7 @@ if __name__=='__main__':
         print(kk.clusters[changed])
 #     kk.register_callback(printclu_before, 'start_EC_steps')
 #     kk.register_callback(printclu_after, 'end_EC_steps')
-    
+
     if os.path.exists(fname+'.clu.'+str(shank)+'.flipflop'):
 #     if False:
         shutil.copy(fname+'.clu.'+str(shank)+'.flipflop', fname+'.clu.'+str(shank))
@@ -74,7 +73,7 @@ if __name__=='__main__':
         print('Generating clusters from scratch')
         #kk.cluster_with_subset_schedule(100, [0.99, 1.0])
         kk.cluster_mask_starts(100)
-    
+
 #     clusters = loadtxt('../temp/testsmallish.start.clu', skiprows=1, dtype=int)
 # #     dump_covariance_matrices(kk)
 # #     dump_variable(kk, 'cluster_mean', slot='end_M_step')
@@ -86,14 +85,14 @@ if __name__=='__main__':
 # #     dump_variable(kk, 'kk.log_p_best[:10]', iscode=True, slot='end_EC_steps')
 # #     dump_variable(kk, 'kk.clusters[:10]', iscode=True, slot='end_EC_steps')
 #     kk.cluster_from(clusters)
-    
+
     save_clu(kk, fname, shank)
-    
+
     clusters = kk.clusters
     kk.reindex_clusters()
-    
+
     num_to_show = 200
-     
+
     for cluster in range(kk.num_clusters_alive):
         if cluster % 4 == 0:
             figure()
@@ -113,7 +112,7 @@ if __name__=='__main__':
         imshow(maskimg, origin='lower left', aspect='auto', interpolation='nearest')
         gray()
         title(cluster)
-    
+
 #     figure()
 #     score, score_raw, penalty = zip(*kk.score_history)
 #     subplot(221)
@@ -124,6 +123,6 @@ if __name__=='__main__':
 #     plot(penalty)
 #     subplot(224)
 #     plot(score)
-#     plot(score_raw)    
-    
+#     plot(score_raw)
+
     show()

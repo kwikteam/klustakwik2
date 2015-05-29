@@ -1,9 +1,9 @@
 from numpy import *
-
 import time
 
 from .data import RawSparseData
 from .logger import log_message
+from six.moves import zip
 
 __all__ = ['load_fet_fmask_to_raw', 'save_clu', 'load_clu', 'SaveCluEvery']
 
@@ -69,17 +69,17 @@ def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=
         fet2sum[masked_inds] += fetvals[masked_inds]**2
         nsum[masked_inds] += 1
     offsets[-1] = curoff
-    
+
     nsum[nsum==0] = 1
     noise_mean = fetsum/nsum
     noise_variance = fet2sum/nsum-noise_mean**2
-    
+
     return RawSparseData(noise_mean, noise_variance, all_features, all_fmasks, all_unmasked, offsets)
 
 
 def save_clu(kk, fname, shank):
     savetxt(fname+'.clu.'+str(shank), kk.clusters+1, '%d', header=str(amax(kk.clusters)), comments='')
-    
+
 
 def load_clu(fname):
     return loadtxt(fname, skiprows=1, dtype=int)-1
@@ -88,12 +88,12 @@ def load_clu(fname):
 class SaveCluEvery(object):
     '''
     Callback to save the clu file every fixed number of iterations.
-    
+
     fname can be a simple string, or a formattable string that takes the kk object as an argument,
     so that you can write, e.g. fname='testdata.{kk.name}.{kk.current_iteration}'.
-    
+
     every is the number of minutes between saves
-    
+
     save_all=True will append .iterN for N the iteration number to the filename, and therefore save
     each clu file produced.
     '''
@@ -103,7 +103,7 @@ class SaveCluEvery(object):
         self.every = every*60
         self.save_all = save_all
         self.t_next = time.time()+self.every
-        
+
     def __call__(self, kk):
         t_cur = time.time()
         if kk.name=='' and t_cur>self.t_next and not kk.is_subset:
@@ -114,4 +114,4 @@ class SaveCluEvery(object):
             log_message('info', 'Saving clu to file '+fname+'.clu.'+shank)
             save_clu(kk, fname, shank)
             self.t_next = time.time()+self.every
-        
+

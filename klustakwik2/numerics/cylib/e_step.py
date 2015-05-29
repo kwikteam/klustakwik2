@@ -1,6 +1,7 @@
 from numpy import *
 from .e_step_cy import *
 import multiprocessing
+from six import itervalues
 
 __all__ = ['compute_log_p_and_assign']
 
@@ -20,25 +21,25 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol,
     features = data.features
     vstart = data.values_start
     vend = data.values_end
-    
-    
+
+
     log_p_best = kk.log_p_best
     log_p_second_best = kk.log_p_second_best
     noise_mean = data.noise_mean
     noise_variance = data.noise_variance
     cluster_mean = kk.cluster_mean
     correction_terms = data.correction_terms
-    
+
     clusters = kk.clusters
     clusters_second_best = kk.clusters_second_best
     old_clusters = kk.old_clusters
     full_step = kk.full_step
-    
+
     n_cpu = multiprocessing.cpu_count()
     f2cm_multiple = numpy.zeros(num_features*n_cpu)
     root_multiple = numpy.zeros(num_features*n_cpu)
     cluster_log_p = numpy.zeros(num_spikes)
-    
+
     if only_evaluate_current_clusters:
         candidates = kk.quick_step_candidates[cluster]
         num_spikes = len(candidates)
@@ -47,7 +48,7 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol,
     else:
         candidates = kk.quick_step_candidates[cluster]
         num_spikes = len(candidates)
-        
+
     do_log_p_assign_computations(
                                   noise_mean, noise_variance, cluster_mean, correction_terms,
                                   log_p_best, log_p_second_best,
@@ -63,7 +64,7 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol,
                                   candidates,
                                   only_evaluate_current_clusters,
                                   )
-    
+
     if only_evaluate_current_clusters:
         kk.log_p_best[candidates] = cluster_log_p[candidates]
     elif full_step and kk.collect_candidates and hasattr(kk, 'old_log_p_best') and kk.full_step_every>1:
@@ -71,7 +72,7 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol,
             kk.max_quick_step_candidates_fraction*kk.num_spikes*kk.num_clusters_alive)
         candidates, = (cluster_log_p-kk.old_log_p_best<=kk.dist_thresh).nonzero()
         kk.quick_step_candidates[cluster] = array(candidates, dtype=int)
-        num_candidates = sum(len(v) for v in kk.quick_step_candidates.values())
+        num_candidates = sum(len(v) for v in kk.quick_step_candidates.itervalues())
         if num_candidates>max_quick_step_candidates:
             kk.collect_candidates = False
             kk.quick_step_candidates.clear()
@@ -82,5 +83,5 @@ def compute_log_p_and_assign(kk, cluster, inv_cov_diag, log_root_det, chol,
             else:
                 kk.log('debug', 'Exceeded quick step point fraction, next step '
                                 'will be full')
-    
+
     return kk.num_spikes-num_spikes

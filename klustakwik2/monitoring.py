@@ -11,6 +11,7 @@ except ImportError:
     multiprocessing = None
 import select
 import inspect
+from six import exec_
 
 __all__ = ['MonitoringServer', 'MonitoringClient']
 
@@ -18,9 +19,9 @@ __all__ = ['MonitoringServer', 'MonitoringClient']
 class MonitoringServer(object):
     '''
     Allows remote control (via IP) of a running KK script
-    
+
     Initialisation arguments:
-    
+
     ``server``
         The IP server details, a pair (host, port). If you want to allow control
         only on the one machine (for example, by an IPython shell), leave this
@@ -35,19 +36,19 @@ class MonitoringServer(object):
         if you leave them blank it will be the local and global namespace of
         the frame from which this function was called (if level=1, or from
         a higher level if you specify a different level here).
-    
+
     Once this object has been created, use a :class:`MonitoringClient` to
     issue commands.
-    
+
     **Example usage**
-    
+
     Main script code includes a line like this::
-    
+
         server = MonitoringServer()
         kk.register_callback(server)
-        
+
     In an IPython shell you can do something like this::
-    
+
         client = MonitoringClient()
         print client.evaluate('kk.num_clusters_alive')
     '''
@@ -100,7 +101,7 @@ class MonitoringServer(object):
                 try:
                     result = None
                     if jobtype == 'exec':
-                        exec(jobargs, global_ns, local_ns)
+                        exec_(jobargs, global_ns, local_ns)
                     elif jobtype == 'eval':
                         result = eval(jobargs, global_ns, local_ns)
                     elif jobtype == 'setvar':
@@ -122,9 +123,9 @@ class MonitoringServer(object):
 class MonitoringClient(object):
     '''
     Used to remotely control (via IP) a running KlustaKwik script
-    
+
     Initialisation arguments:
-    
+
     ``server``
         The IP server details, a pair (host, port). If you want to allow control
         only on the one machine (for example, by an IPython shell), leave this
@@ -136,25 +137,25 @@ class MonitoringClient(object):
         arbitrary code on your machine).
 
     Use a :class:`MonitoringServer` on the run you want to control.
-    
+
     Has the following methods:
-    
+
     .. method:: execute(code)
-    
+
         Executes the specified code in the server process.
         If it raises an
         exception, the server process will catch it and reraise it in the
         client process.
-        
+
     .. method:: evaluate(code)
-    
+
         Evaluate the code in the server process and return the result.
         If it raises an
         exception, the server process will catch it and reraise it in the
         client process.
-        
+
     .. method:: set(name, value)
-    
+
         Sets the variable ``name`` (a string) to the given value (can be an
         array, etc.). Note that the variable is set in the local namespace, not
         the global one, and so this cannot be used to modify global namespace
@@ -163,26 +164,26 @@ class MonitoringClient(object):
         the global namespace variable.
 
     .. method:: pause()
-    
+
         Temporarily stop the script in the server process, continue
         simulation with the :meth:'go' method.
-        
+
     .. method:: go()
-    
+
         Continue a script that was paused.
-        
+
     .. method:: stop()
-    
+
         Stop a script, equivalent to ``execute('exit(0)')``.
- 
+
     **Example usage**
-    
+
     Main script code includes a line like this::
-    
+
         server = MonitoringServer()
-        
+
     In an IPython shell you can do something like this::
-    
+
         client = MonitoringClient()
         print client.evaluate('kk.num_clusters_alive')
    '''
@@ -205,7 +206,7 @@ class MonitoringClient(object):
         if isinstance(result, Exception):
             raise result
         return result
-    
+
     def set(self, name, value):
         self.client.send(('setvar', (name, value)))
         result = self.client.recv()

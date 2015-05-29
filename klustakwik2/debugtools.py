@@ -5,6 +5,7 @@ from numpy import *
 import time
 import subprocess
 import os
+from six import iteritems, exec_
 
 __all__ = ['dump_covariance_matrices', 'dump_variable', 'dump_all', 'get_kk_version']
 
@@ -33,8 +34,8 @@ def covariance_matrix_dump_callback(kk):
 
 def dump_covariance_matrices(kk):
     kk.register_callback(covariance_matrix_dump_callback, 'end_M_step')
-    
-    
+
+
 class DumpVariableCallback(object):
     def __init__(self, varname, iscode, suffix):
         if not iscode:
@@ -43,7 +44,7 @@ class DumpVariableCallback(object):
             self.varcode = varname
         self.suffix = suffix
         self.ns = {}
-        exec('from numpy import *', self.ns)
+        exec_('from numpy import *', self.ns)
     def __call__(self, kk):
         self.ns['kk'] = kk
         obj = eval(self.varcode, self.ns)
@@ -51,8 +52,8 @@ class DumpVariableCallback(object):
         if '\n' in msg:
             msg = '\n'+msg
         kk.log('debug', msg, suffix=self.suffix)
-    
-    
+
+
 def dump_variable(kk, varname, slot='end_iteration', suffix=None, iscode=False):
     if suffix is None:
         suffix = varname
@@ -66,7 +67,7 @@ class DumpAllCallback(object):
         kk.log('debug', 'Dumping variables from slot '+self.slot, suffix=self.slot)
         for i, arg in enumerate(args):
             self.dump_var(kk, 'arg'+str(i), arg)
-        for k, v in kwds.items():
+        for k, v in kwds.iteritems():
             self.dump_var(kk, k, v)
     def dump_var(self, kk, name, val):
         msg = name+' = '
