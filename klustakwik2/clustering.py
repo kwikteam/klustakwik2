@@ -102,11 +102,11 @@ class KK(object):
         show_params = name=='' and not is_subset and not is_copy
         self.params = params
         actual_params = default_parameters.copy()
-        for k, v in params.iteritems():
+        for k, v in iteritems(params):
             if k not in default_parameters:
                 raise ValueError("There is no parameter "+k)
             actual_params[k] = v
-        for k, v in actual_params.iteritems():
+        for k, v in iteritems(actual_params):
             setattr(self, k, v)
             if show_params:
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
