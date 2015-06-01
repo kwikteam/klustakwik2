@@ -25,6 +25,6 @@ install:
   - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
   # Dependencies.
-  - conda install numpy scipy nose cython
+  - conda install numpy scipy nose cython six
 script:
   - nosetests
