@@ -13,7 +13,7 @@ need to install the packages numpy, scipy, cython and nose.
 Install KlustaKwik using ``pip install klustakwik2``.
 
 On Windows, you will need a copy of MS Visual Studio Express 2008 for Python, available for free
-download `here <http://stackoverflow.com/questions/26140192/microsoft-visual-c-compiler-for-python-2-7>`_.
+download `here <http://www.microsoft.com/en-us/download/details.aspx?id=44266>`_.
 
 Usage
 =====
