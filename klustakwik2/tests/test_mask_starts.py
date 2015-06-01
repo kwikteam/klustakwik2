@@ -80,4 +80,3 @@ def test_mask_starts():
 
 if __name__=='__main__':
     test_mask_starts()
-

@@ -1,4 +1,5 @@
 from numpy import *
+from bisect import bisect_left
 
 __all__ = ['compute_correction_terms_and_replace_data',
            'reduce_masks', 'float_num_unmasked',
@@ -53,4 +54,13 @@ def reduce_masks(raw_data):
 
 
 def compute_float_num_unmasked(data):
-    return add.reduceat(data.masks, data.offsets[:-1])
+    # Rather than just doing add.reduceat(data.masks, data.offset[:-1]) which is what we'd like to
+    # do, we have to avoid any offsets equal to the length of masks because even though
+    # the calculation is correct if you think of it as slices, numpy raises an error if any indices
+    # are equal to the length of the array. So we just cut those out and add some zeros at the end.
+    M = data.masks
+    O = data.offsets[:-1]
+    n = bisect_left(O, len(M))-1
+    O2 = O[:n]
+    U = hstack((add.reduceat(M, O2), zeros(len(M)-n)))
+    return U
