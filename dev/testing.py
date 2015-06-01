@@ -11,7 +11,7 @@ if __name__=='__main__':
     #fname, shank = '../temp/20141009_all_AdjGraph', 1
 
     log_to_file(fname+'.klg.'+str(shank), 'debug')
-    log_suppress_hierarchy('klustakwik', inclusive=False)
+    #log_suppress_hierarchy('klustakwik', inclusive=False)
 
     if os.path.exists(fname+'.pickle'):
 #     if False:

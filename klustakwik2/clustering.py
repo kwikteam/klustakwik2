@@ -89,6 +89,7 @@ class KK(object):
     def __init__(self, data, callbacks=None, name='',
                  use_noise_cluster=True, use_mua_cluster=True,
                  is_subset=False, is_copy=False,
+                 map_log_to_debug=False,
                  **params):
         self.name = name
         if callbacks is None:
@@ -98,6 +99,7 @@ class KK(object):
         self.cluster_hashes = set()
         self.is_subset = is_subset
         self.is_copy = is_copy
+        self.map_log_to_debug = map_log_to_debug
         # user parameters
         show_params = name=='' and not is_subset and not is_copy
         self.params = params
@@ -144,6 +146,8 @@ class KK(object):
                 callback(self, *args, **kwds)
 
     def log(self, level, msg, suffix=None):
+        if self.map_log_to_debug:
+            level = 'debug'
         if suffix is not None:
             if self.name=='':
                 name = suffix
@@ -706,7 +710,9 @@ class KK(object):
 
                 K2 = self.subset(spikes_in_cluster, name='split_candidate',
                                  use_noise_cluster=False, use_mua_cluster=False,
-                                 max_iterations=max_iter)
+                                 max_iterations=max_iter,
+                                 map_log_to_debug=True,
+                                 )
                 # at this point in C++ code we look for an unused cluster, but here we can just
                 # use num_clusters+1
                 self.log('debug', 'Trying to split cluster %d containing '
@@ -764,7 +770,7 @@ class KK(object):
 
             with section(self, 'split_evaluation'):
                 # will splitting improve the score in the whole data set?
-                K3 = self.copy(name='split_evaluation')
+                K3 = self.copy(name='split_evaluation', map_log_to_debug=True)
                 clusters = self.clusters.copy()
 
                 if score_ref is None:
