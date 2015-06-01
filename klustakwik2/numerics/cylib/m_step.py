@@ -1,4 +1,5 @@
 from .m_step_cy import *
+from six.moves import range
 
 __all__ = ['compute_cluster_means', 'compute_covariance_matrices']
 
@@ -15,7 +16,7 @@ def compute_cluster_means(kk):
     data = kk.data
     num_clusters = len(kk.num_cluster_members)
     num_features = kk.num_features
-    
+
     cluster_mean = numpy.zeros((num_clusters, num_features))
     num_added = numpy.zeros((num_clusters, num_features), dtype=int)
 
@@ -36,7 +37,7 @@ def compute_covariance_matrices(kk):
     num_clusters = len(num_cluster_members)
     num_features = kk.num_features
 
-    for cluster in xrange(kk.first_gaussian_cluster, num_clusters):
+    for cluster in range(kk.first_gaussian_cluster, num_clusters):
         cov = kk.covariance[cluster]
         block = cov.block
         block_diagonal = get_diagonal(block)
@@ -47,7 +48,7 @@ def compute_covariance_matrices(kk):
 
         f2m = numpy.zeros(num_features)
         ct = numpy.zeros(num_features)
-        
+
         if kk.use_mua_cluster and cluster==kk.mua_cluster:
             point = kk.mua_point
             do_var_accum_mua(spike_indices, kk.cluster_mean[cluster, :],
@@ -66,14 +67,14 @@ def compute_covariance_matrices(kk):
                          data.features, data.values_start, data.values_end,
                          f2m, ct, data.correction_terms, num_features,
                          )
-            
+
         # add correction term for diagonal
         cov.diagonal[:] += len(spike_indices)*data.noise_variance[cov.masked]
-        
+
         # Add prior
         block_diagonal[:] += point*data.noise_variance[cov.unmasked]
         cov.diagonal[:] += point*data.noise_variance[cov.masked]
-        
+
         # Normalise
         factor = 1.0/(num_cluster_members[cluster]+point-1)
         cov.block *= factor

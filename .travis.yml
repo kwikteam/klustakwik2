@@ -2,6 +2,8 @@ language: python
 sudo: false
 python:
   - "2.7"
+  - "3.3"
+  - "3.4"
 install:
   # - sudo apt-get update
   # You may want to periodically update this, although the conda update
@@ -23,6 +25,6 @@ install:
   - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
   # Dependencies.
-  - conda install numpy scipy nose cython
+  - conda install numpy scipy nose cython six
 script:
   - nosetests

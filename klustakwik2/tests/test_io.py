@@ -6,6 +6,7 @@ from nose.tools import nottest
 
 from tempfile import mkdtemp
 import os
+from six.moves import range
 
 @nottest
 def generate_simple_test_raw_data():
@@ -25,7 +26,7 @@ def generate_simple_test_raw_data():
 0 1 1 0 0
 0 0 0 1 1
 '''.strip())
-    
+
     # Data as arrays
     fet = array([[1,3,5,7,11],
                  [6,7,8,9,10],
@@ -35,7 +36,7 @@ def generate_simple_test_raw_data():
                    [0,1,1,0,0],
                    [0,1,1,0,0],
                    [0,0,0,1,1]], dtype=float)
-    
+
     # Normalisation to [0, 1]
     fet = (fet-amin(fet, axis=0))/(amax(fet, axis=0)-amin(fet, axis=0))
 
@@ -63,11 +64,11 @@ def generate_simple_test_data():
 
 
 def test_load_fet_fmask():
-    
+
     ### PART 1: Check that loading to RawSparseData is correct
     data, fet, fmask, features, correction_terms = generate_simple_test_raw_data()
     raw_data = data
-    
+
     nanmasked_fet = fet.copy()
     nanmasked_fet[fmask>0] = nan
     assert_array_almost_equal(data.noise_mean, nanmean(nanmasked_fet, axis=0))
@@ -76,7 +77,7 @@ def test_load_fet_fmask():
     assert amax(data.features)==1
     assert len(data.offsets)==5
     loaded_fet = zeros_like(fet)
-    for i in xrange(4):
+    for i in range(4):
         data_u = data.unmasked[data.offsets[i]:data.offsets[i+1]]
         true_u, = fmask[i, :].nonzero()
         assert_array_equal(data_u, true_u)
@@ -86,15 +87,15 @@ def test_load_fet_fmask():
         data_m = data.masks[data.offsets[i]:data.offsets[i+1]]
         true_m = fmask[i, data_u]
         assert_array_equal(data_m, true_m)
-    
+
     ### PART 2: Check that converting to SparseData is correct
     data = data.to_sparse_data() # compute unique masks and apply correction terms to data
-    
+
     assert data.num_spikes==4
     assert data.num_features==5
     assert data.num_masks==3
 
-    for i in xrange(4):
+    for i in range(4):
         data_u = data.unmasked[data.unmasked_start[i]:data.unmasked_end[i]]
         true_u, = fmask[i, :].nonzero()
         assert_array_equal(data_u, true_u)
@@ -108,7 +109,7 @@ def test_load_fet_fmask():
         true_m = fmask[i, data_u]
         assert_array_almost_equal(data_m, true_m)
 
-    
+
 if __name__=='__main__':
     test_load_fet_fmask()
-    
+
