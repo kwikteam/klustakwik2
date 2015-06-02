@@ -695,7 +695,7 @@ class KK(object):
         for cluster in range(self.num_special_clusters, num_clusters):
             if num_clusters>=self.max_possible_clusters:
                 self.log('info', 'No more splitting, already at maximum number of '
-                                 'clusters' % self.max_possible_clusters)
+                                 'clusters: %d' % self.max_possible_clusters)
                 return did_split
 
             spikes_in_cluster = self.get_spikes_in_cluster(cluster)
