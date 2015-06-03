@@ -11,10 +11,36 @@ Install Python using the `Anaconda distribution <http://continuum.io/downloads>`
 need to install the packages numpy, scipy, cython and nose. For Windows, Python 2.7 might be a better option than
 3.x.
 
-Linux
-~~~~~
+On all platforms, KlustaKwik can be installed using ``pip install klustakwik2``. The default installation options
+are as follows:
 
-Install KlustaKwik using ``pip install klustakwik2``.
+* **Linux**: Multithreading on by default.
+* **Windows**: Multithreading on by default if MSVC installed, otherwise off.
+* **Mac**: Multithreading off by default.
+
+To override these options, install from source (see below).
+
+Installing from source
+~~~~~~~~~~~~~~~~~~~~~~
+
+Download the source, either from one of the source distributions `on PyPI <https://pypi.python.org/pypi/klustakwik2>`_
+or get the latest version `from GitHub <https://github.com/kwikteam/klustakwik2>`_. Run one of the following commands
+from a command prompt in this directory. For default options:
+
+    python setup.py install
+
+To force multithreading to be on:
+
+    python setup.py install --with-openmp
+
+To force multithreading to be off:
+
+    python setup.py install --with-no-openmp
+
+On Windows, it will first attempt to use MSVC as the compiler by default without you needing to specify it. If you
+are an expert user and you don't want this behaviour:
+
+    python setup.py install --no-msvc
 
 Windows
 ~~~~~~~
@@ -26,21 +52,17 @@ Using Python 2.7, you will need a copy of MS Visual Studio Express 2008 for Pyth
 download `here <http://www.microsoft.com/en-us/download/details.aspx?id=44266>`_. Python 3.x might require a different
 version of Visual Studio, we haven't tested this.
 
-Download the source, either from one of the source distributions `on PyPI <https://pypi.python.org/pypi/klustakwik2>`_
-or get the latest version `from GitHub <https://github.com/kwikteam/klustakwik2>`_. Open a command prompt in the
+Download the source as above. Open a command prompt in the
 directory where you downloaded and extracted the files. If you installed Python for all users, then you will need
 admin rights on this command prompt. To get this in Windows, press the Windows key, type "cmd", right click on
 "cmd.exe" and click "Run as administrator".
 
-Now execute the following two commands:
-
-    python setup.py build --compiler=msvc
-    python setup.py install
+Now run the commands as in the section on installing from source above.
 
 Mac
 ~~~
 
-We're working on this.
+It is possible to install a version of ``gcc`` that allows for multithreading. TODO: details.
 
 Usage
 =====

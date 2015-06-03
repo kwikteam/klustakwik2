@@ -10,6 +10,7 @@ import os.path as op
 import re
 import numpy
 import sys
+import platform
 
 try:
     from setuptools import setup
@@ -22,6 +23,24 @@ from Cython.Build import cythonize
 # Setup
 #------------------------------------------------------------------------------
 
+
+# Copied from Brian 2
+def has_option(name):
+    try:
+        sys.argv.remove('--%s' % name)
+        return True
+    except ValueError:
+        pass
+    # allow passing all cmd line options also as environment variables
+    env_val = os.getenv(name.upper().replace('-', '_'), 'false').lower()
+    if env_val == "true":
+        return True
+    return False
+
+
+with_openmp = has_option('with-openmp')
+with_no_openmp = has_option('with-no-openmp')
+no_msvc = has_option('no-msvc')
 
 def _package_tree(pkgroot):
     path = op.dirname(__file__)
@@ -48,17 +67,23 @@ test_requirements = [
 ]
 
 extensions = cythonize('klustakwik2/numerics/cylib/*.pyx')
+appended_msvc = False
 for ext in extensions:
     if 'e_step_cy' in ext.name:
+        if with_no_openmp:
+            continue
         if os.name=='nt': # Windows
             ext.extra_compile_args = ['/openmp']
-        elif sys.platform=='Darwin': # Mac
+            if not no_msvc:
+                sys.argv.append('--compiler=msvc')
+                appended_msvc = False
+        elif platform.system()=='Darwin' and not with_openmp: # Mac
             pass
         else:
             ext.extra_compile_args =['-fopenmp']
             ext.extra_link_args = ['-fopenmp']
 
-setup(
+setup_kwds = dict(
     name='klustakwik2',
     version=version,
     description='Clustering for high dimensional neural data',
@@ -91,4 +116,16 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
     tests_require=test_requirements
-)
+    )
+
+try:
+    setup(**setup_kwds)
+except SystemExit as e:
+    for ext in extensions:
+        ext.extra_compile_args = []
+    if appended_msvc:
+    try:
+        sys.argv.remove('--compiler=msvc')
+    except ValueError:
+        pass
+    setup(**setup_kwds)
