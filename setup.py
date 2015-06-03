@@ -9,6 +9,7 @@ import os
 import os.path as op
 import re
 import numpy
+import sys
 
 try:
     from setuptools import setup
@@ -46,6 +47,17 @@ requirements = [
 test_requirements = [
 ]
 
+extensions = cythonize('klustakwik2/numerics/cylib/*.pyx')
+for ext in extensions:
+    if 'e_step_cy' in ext.name:
+        if os.name=='nt': # Windows
+            ext.extra_compile_args = ['/openmp']
+        elif sys.platform=='Darwin': # Mac
+            pass
+        else:
+            ext.extra_compile_args =['-fopenmp']
+            ext.extra_link_args = ['-fopenmp']
+
 setup(
     name='klustakwik2',
     version=version,
@@ -56,7 +68,7 @@ setup(
     package_dir={'klustakwik2': 'klustakwik2'},
     package_data={'klustakwik2.numerics.cylib': ['*.pyx']},
     include_package_data=True,
-    ext_modules=cythonize('klustakwik2/numerics/cylib/*.pyx'),
+    ext_modules=extensions,
     include_dirs=[numpy.get_include()],
     entry_points={
         'console_scripts': [

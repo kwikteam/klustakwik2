@@ -3,10 +3,6 @@
 #cython: cdivision=True
 #cython: infer_types=True
 # distutils: language = c++
-# START_OPEN_MP
-# distutils: extra_compile_args = -fopenmp
-# distutils: extra_link_args = -fopenmp
-# END_OPEN_MP
 
 import numpy
 cimport numpy
