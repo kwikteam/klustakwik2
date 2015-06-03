@@ -4,7 +4,6 @@ from .mask_starts import *
 from .clustering import *
 from .logger import *
 from .scripts.tools import *
-from .tests import run as test
 from .monitoring import *
 from .debugtools import *
 from .default_parameters import *
