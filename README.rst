@@ -7,13 +7,40 @@ klustakwik2
 Installation instructions
 =========================
 
-Install Python 2.7 using the `Anaconda distribution <http://continuum.io/downloads>`_. You will
-need to install the packages numpy, scipy, cython and nose.
+Install Python using the `Anaconda distribution <http://continuum.io/downloads>`_. You will
+need to install the packages numpy, scipy, cython and nose. For Windows, Python 2.7 might be a better option than
+3.x.
+
+Linux
+~~~~~
 
 Install KlustaKwik using ``pip install klustakwik2``.
 
-On Windows, you will need a copy of MS Visual Studio Express 2008 for Python, available for free
-download `here <http://www.microsoft.com/en-us/download/details.aspx?id=44266>`_.
+Windows
+~~~~~~~
+
+In the future we will provide a binary distribution that won't require compilation, however for the moment the
+following, slightly more complicated than ideal installation steps are required.
+
+Using Python 2.7, you will need a copy of MS Visual Studio Express 2008 for Python, available for free
+download `here <http://www.microsoft.com/en-us/download/details.aspx?id=44266>`_. Python 3.x might require a different
+version of Visual Studio, we haven't tested this.
+
+Download the source, either from one of the source distributions `on PyPI <https://pypi.python.org/pypi/klustakwik2>`_
+or get the latest version `from GitHub <https://github.com/kwikteam/klustakwik2>`_. Open a command prompt in the
+directory where you downloaded and extracted the files. If you installed Python for all users, then you will need
+admin rights on this command prompt. To get this in Windows, press the Windows key, type "cmd", right click on
+"cmd.exe" and click "Run as administrator".
+
+Now execute the following two commands:
+
+    python setup.py build --compiler=msvc
+    python setup.py install
+
+Mac
+~~~
+
+We're working on this.
 
 Usage
 =====
