@@ -124,8 +124,8 @@ except SystemExit as e:
     for ext in extensions:
         ext.extra_compile_args = []
     if appended_msvc:
-    try:
-        sys.argv.remove('--compiler=msvc')
-    except ValueError:
-        pass
+        try:
+            sys.argv.remove('--compiler=msvc')
+        except ValueError:
+            pass
     setup(**setup_kwds)
