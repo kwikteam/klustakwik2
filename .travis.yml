@@ -27,6 +27,8 @@ install:
   # Dependencies.
   - conda install numpy scipy nose cython six
   # Install KK2
-  - pip install .
+  - python setup.py install --fail-on-error
 script:
-  - nosetests
+  - cd dev
+  - python run_nose_tests.py
+
