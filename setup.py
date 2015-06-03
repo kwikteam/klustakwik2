@@ -8,13 +8,14 @@
 import os
 import os.path as op
 import re
-from Cython.Build import cythonize
 import numpy
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+
+from Cython.Build import cythonize
 
 #------------------------------------------------------------------------------
 # Setup
@@ -53,9 +54,10 @@ setup(
     url='https://github.com/kwikteam/klustakwik2',
     packages=_package_tree('klustakwik2'),
     package_dir={'klustakwik2': 'klustakwik2'},
-    package_data={'klustakwik2.numerics.cylib': ['*.pyx', '*.pyxbld']},
+    package_data={'klustakwik2.numerics.cylib': ['*.pyx']},
     include_package_data=True,
-    ext_modules=cythonize('klustakwik2/numerics/cylib/*.pyx', include_path=[numpy.get_include()]),
+    ext_modules=cythonize('klustakwik2/numerics/cylib/*.pyx'),
+    include_dirs=[numpy.get_include()],
     entry_points={
         'console_scripts': [
             'kk2_legacy=klustakwik2.scripts.kk2_legacy:main',
