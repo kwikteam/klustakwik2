@@ -26,5 +26,8 @@ install:
   - source activate testenv
   # Dependencies.
   - conda install numpy scipy nose cython six
+  # Install KK2
+  - python setup.py install
 script:
-  - nosetests
+  - cd dev
+  - python run_nose_tests.py
