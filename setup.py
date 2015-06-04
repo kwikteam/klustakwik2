@@ -39,7 +39,7 @@ def has_option(name):
 
 
 with_openmp = has_option('with-openmp')
-with_no_openmp = has_option('with-no-openmp')
+no_openmp = has_option('no-openmp')
 no_msvc = has_option('no-msvc')
 
 def _package_tree(pkgroot):
@@ -70,7 +70,7 @@ extensions = cythonize('klustakwik2/numerics/cylib/*.pyx')
 appended_msvc = False
 for ext in extensions:
     if 'e_step_cy' in ext.name:
-        if with_no_openmp:
+        if no_openmp:
             continue
         if os.name=='nt': # Windows
             ext.extra_compile_args = ['/openmp']

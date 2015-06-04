@@ -35,7 +35,7 @@ To force multithreading to be on:
 
 To force multithreading to be off:
 
-    python setup.py install --with-no-openmp
+    python setup.py install --no-openmp
 
 On Windows, it will first attempt to use MSVC as the compiler by default without you needing to specify it. If you
 are an expert user and you don't want this behaviour:
