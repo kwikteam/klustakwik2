@@ -9,8 +9,8 @@ from numpy.random import randint, rand
 # versions
 from klustakwik2.clustering import (accumulate_cluster_mask_sum, compute_cluster_means)
 
-from test_compute_cluster_masks import generate_simple_test_kk
-from test_compute_covariance_matrix import test_compute_covariance_matrix
+from .test_compute_cluster_masks import generate_simple_test_kk
+from .test_compute_covariance_matrix import test_compute_covariance_matrix
 
 def test_m_step():
     '''

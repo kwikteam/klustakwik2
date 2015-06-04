@@ -43,9 +43,9 @@ def main():
     
     if subset_schedule is not None:
         if save_clu_every is not None:
-            print 'Note that intermediate clu files will only be saved for the last subset operation.'
+            print('Note that intermediate clu files will only be saved for the last subset operation.')
         if not use_noise_cluster:
-            print 'Must use noise cluster when using subsetting'
+            print('Must use noise cluster when using subsetting')
             exit(1)
 
     if debug:

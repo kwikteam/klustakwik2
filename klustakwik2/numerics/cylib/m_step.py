@@ -1,4 +1,5 @@
 from .m_step_cy import *
+from six.moves import range
 
 __all__ = ['compute_cluster_mean', 'compute_covariance_matrix']
 
