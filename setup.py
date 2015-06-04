@@ -75,8 +75,8 @@ for ext in extensions:
         if os.name=='nt': # Windows
             ext.extra_compile_args = ['/openmp']
             if not no_msvc:
-                sys.argv.append('--compiler=msvc')
-                appended_msvc = False
+                open('distutils.cfg', 'w').write('[build] compiler=msvc\n')
+                appended_msvc = True
         elif platform.system()=='Darwin' and not with_openmp: # Mac
             pass
         else:
@@ -125,7 +125,12 @@ except SystemExit as e:
         ext.extra_compile_args = []
     if appended_msvc:
         try:
-            sys.argv.remove('--compiler=msvc')
-        except ValueError:
+            os.remove('distutils.cfg')
+        except:
             pass
     setup(**setup_kwds)
+if appended_msvc:
+    try:
+        os.remove('distutils.cfg')
+    except:
+        pass

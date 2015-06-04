@@ -15,7 +15,8 @@ On all platforms, KlustaKwik can be installed using ``pip install klustakwik2``.
 are as follows:
 
 * **Linux**: Multithreading on by default.
-* **Windows**: Multithreading on by default if MSVC installed, otherwise off.
+* **Windows**: Multithreading on by default if MSVC installed and MinGW32 not installed, otherwise off. This means that
+  multithreading support is off by default with the Anaconda distribution of Python.
 * **Mac**: Multithreading off by default.
 
 To override these options, install from source (see below).
@@ -28,6 +29,10 @@ or get the latest version `from GitHub <https://github.com/kwikteam/klustakwik2>
 from a command prompt in this directory. For default options:
 
     python setup.py install
+
+Note that in Windows, if you have MSVC installed, and you install with the command above instead of
+``pip install klustakwik2`` then you will get multithreading support. This is a limitation of ``pip`` that we do not
+yet know how to work around.
 
 To force multithreading to be on:
 
