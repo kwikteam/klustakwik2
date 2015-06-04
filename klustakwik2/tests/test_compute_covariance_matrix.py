@@ -23,7 +23,8 @@ def test_compute_covariance_matrix():
     num_features = kk.num_features
 
     cluster_mask_sum = zeros((num_clusters, num_features))
-    accumulate_cluster_mask_sum(kk, cluster_mask_sum)
+    for cluster in range(kk.num_special_clusters, num_clusters):
+        accumulate_cluster_mask_sum(kk, cluster_mask_sum[cluster, :], kk.get_spikes_in_cluster(cluster))
     cluster_mask_sum[:kk.num_special_clusters, :] = -1 # ensure that special clusters are masked
 
     cov_matrices = []

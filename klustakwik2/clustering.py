@@ -398,12 +398,6 @@ class KK(object):
         cluster_start = self.num_special_clusters
         num_spikes = self.num_spikes
 
-        # Compute the sum of fmasks for all clusters 
-        cluster_mask_sum = zeros((num_clusters, num_features))
-        accumulate_cluster_mask_sum(self, cluster_mask_sum)
-        cluster_mask_sum[:self.num_special_clusters, :] = -1 # ensure that special clusters are masked
-        self.run_callbacks('cluster_mask_sum', cluster_mask_sum=cluster_mask_sum)
-
         # Weight computations
         denom = self.num_spikes+self.prior_point*(num_clusters-self.num_special_clusters)
         if self.use_noise_cluster:
@@ -452,10 +446,16 @@ class KK(object):
         clusters_to_kill = []
         
         for cluster in range(num_clusters):
+            # Compute the sum of fmasks
+            if cluster<self.num_special_clusters:
+                cluster_mask_sum = full(num_features, -1.0) # ensure that special clusters are masked
+            else:
+                cluster_mask_sum = zeros(num_features)
+                accumulate_cluster_mask_sum(self, cluster_mask_sum, self.get_spikes_in_cluster(cluster))
+
             # Compute the masked and unmasked sets
-            curmask = cluster_mask_sum[cluster, :]
-            unmasked, = (curmask>=self.points_for_cluster_mask).nonzero()
-            masked, = (curmask<self.points_for_cluster_mask).nonzero()
+            unmasked, = (cluster_mask_sum>=self.points_for_cluster_mask).nonzero()
+            masked, = (cluster_mask_sum<self.points_for_cluster_mask).nonzero()
             unmasked = array(unmasked, dtype=int)
             masked = array(masked, dtype=int)
             cov = BlockPlusDiagonalMatrix(masked, unmasked)

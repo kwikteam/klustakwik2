@@ -4,6 +4,7 @@ from numpy.testing import assert_raises, assert_array_almost_equal, assert_array
 from nose import with_setup
 from nose.tools import nottest
 from numpy.random import randint, rand
+from six.moves import range
 
 # we use the version that is used in klustakwik2 rather than separately testing the numba/cython
 # versions
@@ -36,8 +37,9 @@ def test_accumulate_cluster_mask_sum():
     
     cluster_mask_sum = zeros((num_clusters, num_features))
     cluster_mask_sum[:2, :] = -1 # ensure that clusters 0 and 1 are masked
-    
-    accumulate_cluster_mask_sum(kk, cluster_mask_sum)
+
+    for cluster in range(2, num_clusters):
+        accumulate_cluster_mask_sum(kk, cluster_mask_sum[cluster, :], kk.get_spikes_in_cluster(cluster))
     
     # cluster 2 has only point 0 in it, so the cluster_mask sum should be just the corresponding
     # fmask line
