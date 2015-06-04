@@ -40,7 +40,6 @@ def has_option(name):
 
 with_openmp = has_option('with-openmp')
 no_openmp = has_option('no-openmp')
-no_msvc = has_option('no-msvc')
 
 def _package_tree(pkgroot):
     path = op.dirname(__file__)
@@ -67,16 +66,12 @@ test_requirements = [
 ]
 
 extensions = cythonize('klustakwik2/numerics/cylib/*.pyx')
-appended_msvc = False
 for ext in extensions:
     if 'e_step_cy' in ext.name:
         if no_openmp:
             continue
         if os.name=='nt': # Windows
             ext.extra_compile_args = ['/openmp']
-            if not no_msvc:
-                open('distutils.cfg', 'w').write('[build] compiler=msvc\n')
-                appended_msvc = True
         elif platform.system()=='Darwin' and not with_openmp: # Mac
             pass
         else:
@@ -121,16 +116,8 @@ setup_kwds = dict(
 try:
     setup(**setup_kwds)
 except SystemExit as e:
+    # try without OpenMP
     for ext in extensions:
         ext.extra_compile_args = []
-    if appended_msvc:
-        try:
-            os.remove('distutils.cfg')
-        except:
-            pass
+        ext.extra_link_args = []
     setup(**setup_kwds)
-if appended_msvc:
-    try:
-        os.remove('distutils.cfg')
-    except:
-        pass

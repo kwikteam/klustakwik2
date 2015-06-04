@@ -15,11 +15,20 @@ On all platforms, KlustaKwik can be installed using ``pip install klustakwik2``.
 are as follows:
 
 * **Linux**: Multithreading on by default.
-* **Windows**: Multithreading on by default if MSVC installed and MinGW32 not installed, otherwise off. This means that
-  multithreading support is off by default with the Anaconda distribution of Python.
+* **Windows**: Multithreading on by default if MSVC installed, otherwise off. Note that under the Anaconda distribution,
+  multithreading will be off by default, but this can be easily resolved if you have MSVC installed, see below.
 * **Mac**: Multithreading off by default.
 
 To override these options, install from source (see below).
+
+Multithreading with Anaconda on Windows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Anaconda distribution installs its own compiler that doesn't support OpenMP for multithreading and uses this by
+default instead of the MSVC compiler, which does support OpenMP. To disable the Anaconda compiler, simply run the
+following command before installing KlustaKwik.
+
+    conda remove libpython
 
 Installing from source
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -30,10 +39,6 @@ from a command prompt in this directory. For default options:
 
     python setup.py install
 
-Note that in Windows, if you have MSVC installed, and you install with the command above instead of
-``pip install klustakwik2`` then you will get multithreading support. This is a limitation of ``pip`` that we do not
-yet know how to work around.
-
 To force multithreading to be on:
 
     python setup.py install --with-openmp
@@ -41,11 +46,6 @@ To force multithreading to be on:
 To force multithreading to be off:
 
     python setup.py install --no-openmp
-
-On Windows, it will first attempt to use MSVC as the compiler by default without you needing to specify it. If you
-are an expert user and you don't want this behaviour:
-
-    python setup.py install --no-msvc
 
 Windows
 ~~~~~~~
