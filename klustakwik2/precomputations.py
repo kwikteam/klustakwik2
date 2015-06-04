@@ -62,5 +62,5 @@ def compute_float_num_unmasked(data):
     O = data.offsets[:-1]
     n = bisect_left(O, len(M))-1
     O2 = O[:n]
-    U = hstack((add.reduceat(M, O2), zeros(len(M)-n)))
+    U = hstack((add.reduceat(M, O2), zeros(len(O)-n)))
     return U
