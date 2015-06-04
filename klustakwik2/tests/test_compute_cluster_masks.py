@@ -49,58 +49,5 @@ def test_accumulate_cluster_mask_sum():
     assert (cluster_mask_sum[1, :]==-1).all()
 
 
-def test_compute_cluster_masks():
-    kk = generate_simple_test_kk(points_for_cluster_mask=1)
-    kk.compute_cluster_masks()
-    assert_array_equal(kk.cluster_unmasked_features[0], [])
-    assert_array_equal(kk.cluster_masked_features[0], [0, 1, 2, 3, 4])
-    assert_array_equal(kk.cluster_unmasked_features[1], [])
-    assert_array_equal(kk.cluster_masked_features[1], [0, 1, 2, 3, 4])
-    assert_array_equal(kk.cluster_unmasked_features[2], [0])
-    assert_array_equal(kk.cluster_masked_features[2], [1, 2, 3, 4])
-    assert_array_equal(kk.cluster_unmasked_features[3], [1, 2])
-    assert_array_equal(kk.cluster_masked_features[3], [0, 3, 4])
-    assert_array_equal(kk.cluster_unmasked_features[4], [3, 4])
-    assert_array_equal(kk.cluster_masked_features[4], [0, 1, 2])
-    
-    kk.points_for_cluster_mask = 0.1
-    kk.compute_cluster_masks()
-    assert_array_equal(kk.cluster_unmasked_features[0], [])
-    assert_array_equal(kk.cluster_masked_features[0], [0, 1, 2, 3, 4])
-    assert kk.covariance[0].block.shape==(0, 0)
-    assert kk.covariance[0].diagonal.shape==(5,)
-    assert_array_equal(kk.cluster_unmasked_features[1], [])
-    assert_array_equal(kk.cluster_masked_features[1], [0, 1, 2, 3, 4])
-    assert kk.covariance[1].block.shape==(0, 0)
-    assert kk.covariance[1].diagonal.shape==(5,)
-    assert_array_equal(kk.cluster_unmasked_features[2], [0, 1])
-    assert_array_equal(kk.cluster_masked_features[2], [2, 3, 4])
-    assert kk.covariance[2].block.shape==(2, 2)
-    assert kk.covariance[2].diagonal.shape==(3,)
-    assert_array_equal(kk.cluster_unmasked_features[3], [1, 2])
-    assert_array_equal(kk.cluster_masked_features[3], [0, 3, 4])
-    assert kk.covariance[3].block.shape==(2, 2)
-    assert kk.covariance[3].diagonal.shape==(3,)
-    assert_array_equal(kk.cluster_unmasked_features[4], [3, 4])
-    assert_array_equal(kk.cluster_masked_features[4], [0, 1, 2])
-    assert kk.covariance[4].block.shape==(2, 2)
-    assert kk.covariance[4].diagonal.shape==(3,)
-
-    kk.points_for_cluster_mask = 1.5
-    kk.compute_cluster_masks()
-    assert_array_equal(kk.cluster_unmasked_features[0], [])
-    assert_array_equal(kk.cluster_masked_features[0], [0, 1, 2, 3, 4])
-    assert_array_equal(kk.cluster_unmasked_features[1], [])
-    assert_array_equal(kk.cluster_masked_features[1], [0, 1, 2, 3, 4])
-    assert_array_equal(kk.cluster_unmasked_features[2], [])
-    assert_array_equal(kk.cluster_masked_features[2], [0, 1, 2, 3, 4])
-    assert_array_equal(kk.cluster_unmasked_features[3], [1, 2])
-    assert_array_equal(kk.cluster_masked_features[3], [0, 3, 4])
-    assert_array_equal(kk.cluster_unmasked_features[4], [])
-    assert_array_equal(kk.cluster_masked_features[4], [0, 1, 2, 3, 4])
-    
-
 if __name__=='__main__':
     test_accumulate_cluster_mask_sum()
-    test_compute_cluster_masks()
-    
