@@ -112,6 +112,7 @@ class KK(object):
             setattr(self, k, v)
             if show_params:
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
+        self.all_params = actual_params
         # Assignment of special clusters
         self.num_special_clusters = 0
         self.first_gaussian_cluster = 0
