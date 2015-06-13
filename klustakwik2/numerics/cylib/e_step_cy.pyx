@@ -43,7 +43,7 @@ cpdef trisolve(
 cpdef do_log_p_assign_computations(
             floating[:] noise_mean,
             floating[:] noise_variance,
-            floating[:, :] cluster_mean,
+            floating[:] cluster_mean,
             floating[:] correction_terms,
             floating[:] log_p_best,
             floating[:] log_p_second_best,
@@ -89,12 +89,12 @@ cpdef do_log_p_assign_computations(
             p = candidates[pp]
         
         for i in range(num_features):
-            f2cm[i+vo] = noise_mean[i]-cluster_mean[cluster, i]
+            f2cm[i+vo] = noise_mean[i]-cluster_mean[i]
         num_unmasked = uend[p]-ustart[p]
         for ii in range(num_unmasked):
             i = unmasked[ustart[p]+ii]
             j = vstart[p]+ii
-            f2cm[i+vo] = features[j]-cluster_mean[cluster, i]
+            f2cm[i+vo] = features[j]-cluster_mean[i]
         
         # TriSolve step, inlined for Cython OpenMP support
         # This code is adapted from the function above, see there for details
