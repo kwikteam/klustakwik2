@@ -28,6 +28,9 @@ if __name__=='__main__':
     print('Number of spikes:', data.num_spikes)
     print('Number of unique masks:', data.num_masks)
 
+    #distributer = None
+    distributer = MockDistributer(10)
+
     kk = KK(data, max_iterations=1000,
             use_mua_cluster=False,
 #             split_every=1, split_first=1, # for debugging splits
@@ -41,6 +44,7 @@ if __name__=='__main__':
 #             fast_split=True,
 #             max_split_iterations=10,
             consider_cluster_deletion=True,
+            distributer=distributer,
             )
 #     kk.register_callback(SaveCluEvery(fname, shank, every=1))
     kk.register_callback(MonitoringServer())

@@ -93,6 +93,7 @@ class KK(object):
                  use_noise_cluster=True, use_mua_cluster=True,
                  is_subset=False, is_copy=False,
                  map_log_to_debug=False,
+                 distributer=None,
                  **params):
         self.name = name
         if callbacks is None:
@@ -138,6 +139,10 @@ class KK(object):
             for k in ['use_noise_cluster', 'use_mua_cluster']:
                 v = getattr(self, k)
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
+
+        self.distributer = distributer
+        if distributer is not None:
+            distributer.start(self)
 
     def register_callback(self, callback, slot='end_iteration'):
         if slot not in self.callbacks:
@@ -401,30 +406,22 @@ class KK(object):
         num_clusters = self.num_clusters_alive
         num_cluster_members = self.num_cluster_members
 
-        if only_evaluate_current_clusters: # no value in distributing this
+        if self.distributer is None or only_evaluate_current_clusters: # no value in distributing this
             self.prepare_for_MEC_steps(only_evaluate_current_clusters=only_evaluate_current_clusters)
             for cluster in range(num_clusters):
                 self.MEC_steps_cluster(cluster, only_evaluate_current_clusters=only_evaluate_current_clusters)
         else:
-            # TODO: this is a mock distributed computation, make it really distributed
             clusters = self.clusters.copy()
             self.prepare_for_MEC_steps(only_evaluate_current_clusters=only_evaluate_current_clusters)
-            distributer = MockDistributer(2)
-            distributer.start(self)
             cluster_order = argsort(num_cluster_members)[::-1] # largest first
-            distributer.iteration(clusters, cluster_order, self.full_step, only_evaluate_current_clusters)
-            for results in distributer.iteration_results():
+            self.distributer.iteration(clusters, cluster_order, self.full_step, only_evaluate_current_clusters)
+            for results in self.distributer.iteration_results():
                 merge_log_p_arrays(self.num_spikes,
                                    self.log_p_best, self.log_p_second_best,
                                    self.clusters, self.clusters_second_best,
                                    results['log_p_best'], results['log_p_second_best'],
                                    results['clusters'], results['clusters_second_best'],
                                    )
-        # No distribution
-        # self.prepare_for_MEC_steps(only_evaluate_current_clusters=only_evaluate_current_clusters)
-        # for cluster in range(num_clusters):
-        #     self.MEC_steps_cluster(cluster, only_evaluate_current_clusters=only_evaluate_current_clusters)
-
         # we've reassigned clusters so we need to recompute the partitions, but we don't want to
         # reindex yet because we may reassign points to different clusters and we need the original
         # cluster numbers for that
