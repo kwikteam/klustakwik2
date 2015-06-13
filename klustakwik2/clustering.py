@@ -390,13 +390,23 @@ class KK(object):
         # in each cluster, compute the cluster masks and allocate space for
         # covariance matrices
         self.reindex_clusters()
-        # Computes the masked and unmasked indices for each cluster based on the
-        # masks for each point in that cluster. Allocates space for covariance
-        # matrices.
+
         num_clusters = self.num_clusters_alive
-        num_features = self.num_features
         num_cluster_members = self.num_cluster_members
-        cluster_start = self.num_special_clusters
+
+        self.prepare_for_MEC_steps(only_evaluate_current_clusters=only_evaluate_current_clusters)
+        for cluster in range(num_clusters):
+            self.MEC_steps_cluster(cluster, only_evaluate_current_clusters=only_evaluate_current_clusters)
+
+        # we've reassigned clusters so we need to recompute the partitions, but we don't want to
+        # reindex yet because we may reassign points to different clusters and we need the original
+        # cluster numbers for that
+        self.partition_clusters()
+
+    @add_slots
+    def prepare_for_MEC_steps(self, only_evaluate_current_clusters=False):
+        num_clusters = self.num_clusters_alive
+        num_cluster_members = self.num_cluster_members
         num_spikes = self.num_spikes
 
         # Weight computations
@@ -408,7 +418,9 @@ class KK(object):
         denom = float(denom)
         if self.use_noise_cluster:
             noise_weight = (num_cluster_members[self.noise_cluster]+self.noise_point)/denom
-        
+            self._noise_weight = noise_weight
+        self._denom = denom
+
         # Arrays that will be used in E-step part
         if only_evaluate_current_clusters:
             self.clusters_second_best = zeros(0, dtype=int)
@@ -444,75 +456,74 @@ class KK(object):
         else:
             self.collect_candidates = False
         
-        clusters_to_kill = []
-        
-        for cluster in range(num_clusters):
-            # Compute the sum of fmasks
-            if cluster<self.num_special_clusters:
-                cluster_mask_sum = full(num_features, -1.0) # ensure that special clusters are masked
-            else:
-                cluster_mask_sum = zeros(num_features)
-                accumulate_cluster_mask_sum(self, cluster_mask_sum, self.get_spikes_in_cluster(cluster))
+        self.clusters_to_kill = []
 
-            # Compute the masked and unmasked sets
-            unmasked, = (cluster_mask_sum>=self.points_for_cluster_mask).nonzero()
-            masked, = (cluster_mask_sum<self.points_for_cluster_mask).nonzero()
-            unmasked = array(unmasked, dtype=int)
-            masked = array(masked, dtype=int)
-            cov = BlockPlusDiagonalMatrix(masked, unmasked)
+    @add_slots
+    def MEC_steps_cluster(self, cluster, only_evaluate_current_clusters=False):
+        denom = self._denom
+        num_cluster_members = self.num_cluster_members
+        num_features = self.num_features
+        # Compute the sum of fmasks
+        if cluster<self.num_special_clusters:
+            cluster_mask_sum = full(num_features, -1.0) # ensure that special clusters are masked
+        else:
+            cluster_mask_sum = zeros(num_features)
+            accumulate_cluster_mask_sum(self, cluster_mask_sum, self.get_spikes_in_cluster(cluster))
 
-            ########### M step ########################################################
-        
-            # Normalize by total number of points to give class weight
-            if cluster==self.noise_cluster:
-                weight = noise_weight
-            elif cluster==self.mua_cluster:
-                weight = (num_cluster_members[self.mua_cluster]+self.mua_point)/denom
-            else:
-                weight = (num_cluster_members[cluster]+self.prior_point)/denom
-        
-            # Compute means for each cluster
-            # Note that we do this densely at the moment, might want to switch
-            # that to a sparse structure later
-            cluster_mean = compute_cluster_mean(self, cluster)        
-            # Compute covariance matrices
-            compute_covariance_matrix(self, cluster, cluster_mean, cov)
-            
-            ########### EC steps ######################################################
-            
-            if cluster<self.num_special_clusters:
-                continue   
-            try:
-                chol = cov.cholesky()
-            except LinAlgError:
-                self.log('warning', 'Linear algebra error on cluster '+str(cluster))
-                clusters_to_kill.append(cluster) # todo: we don't actually do anything with this...
-                continue
+        # Compute the masked and unmasked sets
+        unmasked, = (cluster_mask_sum>=self.points_for_cluster_mask).nonzero()
+        masked, = (cluster_mask_sum<self.points_for_cluster_mask).nonzero()
+        unmasked = array(unmasked, dtype=int)
+        masked = array(masked, dtype=int)
+        cov = BlockPlusDiagonalMatrix(masked, unmasked)
 
-            # LogRootDet is given by log of product of diagonal elements
-            log_root_det = sum(log(chol.diagonal))+sum(log(chol.block.diagonal()))
+        ########### M step ########################################################
 
-            # compute diagonal of inverse of cov matrix
-            inv_cov_diag = zeros(num_features)
-            basis_vector = zeros(num_features)
-            for i in range(num_features):
-                basis_vector[i] = 1.0
-                root = chol.trisolve(basis_vector)
-                inv_cov_diag[i] = sum(root**2)
-                basis_vector[i] = 0.0
+        # Normalize by total number of points to give class weight
+        if cluster==self.noise_cluster:
+            weight = self._noise_weight
+        elif cluster==self.mua_cluster:
+            weight = (num_cluster_members[self.mua_cluster]+self.mua_point)/denom
+        else:
+            weight = (num_cluster_members[cluster]+self.prior_point)/denom
 
-            self.run_callbacks('e_step_before_main_loop', cholesky=chol, cluster=cluster,
-                               inv_cov_diag=inv_cov_diag)
-                
-            compute_log_p_and_assign(self, cluster, weight, inv_cov_diag, log_root_det, chol,
-                                     cluster_mean, only_evaluate_current_clusters)
-            
-            self.run_callbacks('e_step_after_main_loop')
+        # Compute means for each cluster
+        # Note that we do this densely at the moment, might want to switch
+        # that to a sparse structure later
+        cluster_mean = compute_cluster_mean(self, cluster)
+        # Compute covariance matrices
+        compute_covariance_matrix(self, cluster, cluster_mean, cov)
 
-        # we've reassigned clusters so we need to recompute the partitions, but we don't want to
-        # reindex yet because we may reassign points to different clusters and we need the original
-        # cluster numbers for that
-        self.partition_clusters()
+        ########### EC steps ######################################################
+
+        if cluster<self.num_special_clusters:
+            return
+        try:
+            chol = cov.cholesky()
+        except LinAlgError:
+            self.log('warning', 'Linear algebra error on cluster '+str(cluster))
+            self.clusters_to_kill.append(cluster) # todo: we don't actually do anything with this...
+            return
+
+        # LogRootDet is given by log of product of diagonal elements
+        log_root_det = sum(log(chol.diagonal))+sum(log(chol.block.diagonal()))
+
+        # compute diagonal of inverse of cov matrix
+        inv_cov_diag = zeros(num_features)
+        basis_vector = zeros(num_features)
+        for i in range(num_features):
+            basis_vector[i] = 1.0
+            root = chol.trisolve(basis_vector)
+            inv_cov_diag[i] = sum(root**2)
+            basis_vector[i] = 0.0
+
+        self.run_callbacks('e_step_before_main_loop', cholesky=chol, cluster=cluster,
+                           inv_cov_diag=inv_cov_diag)
+
+        compute_log_p_and_assign(self, cluster, weight, inv_cov_diag, log_root_det, chol,
+                                 cluster_mean, only_evaluate_current_clusters)
+
+        self.run_callbacks('e_step_after_main_loop')
 
     @add_slots
     def compute_cluster_penalties(self, clusters=None):
