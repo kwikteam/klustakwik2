@@ -34,15 +34,14 @@ class MockDistributer(Distributer):
         self.kk_copies = [kk.copy_without_callbacks() for _ in range(self.N)]
 
     def iteration(self, clusters, cluster_order, full_step, only_evaluate_current_clusters):
-        self.only_evaluate_current_clusters = only_evaluate_current_clusters
         for kk_copy in self.kk_copies:
-            kk_copy.clusters = clusters
+            kk_copy.clusters = clusters.copy()
             kk_copy.full_step = full_step
             kk_copy.reindex_clusters()
             kk_copy.prepare_for_MEC_steps(only_evaluate_current_clusters=only_evaluate_current_clusters)
         for i, cluster in enumerate(cluster_order):
             kk_copy = self.kk_copies[i%self.N]
-            kk_copy.MEC_steps_cluster(cluster, only_evaluate_current_clusters=self.only_evaluate_current_clusters)
+            kk_copy.MEC_steps_cluster(cluster, only_evaluate_current_clusters=only_evaluate_current_clusters)
 
     def iteration_results(self):
         for kk_copy in self.kk_copies:

@@ -158,3 +158,38 @@ cpdef do_log_p_assign_computations(
         elif log_p<cur_log_p_second_best:
             log_p_second_best[p] = log_p
             clusters_second_best[p] = cluster
+
+
+cpdef merge_log_p_arrays(integral num_spikes,
+                         floating[:] log_p_best,
+                         floating[:] log_p_second_best,
+                         integral[:] clusters,
+                         integral[:] clusters_second_best,
+                         floating[:] log_p_best2,
+                         floating[:] log_p_second_best2,
+                         integral[:] clusters2,
+                         integral[:] clusters_second_best2,
+                         ):
+    cdef integral p, cluster
+    cdef floating log_p, cur_log_p_best, cur_log_p_second_best
+
+    for p in range(num_spikes):
+        for i in range(2):
+            if i==0:
+                log_p = log_p_best2[p]
+                cluster = clusters2[p]
+            else:
+                log_p = log_p_second_best2[p]
+                cluster = clusters_second_best2[p]
+
+            cur_log_p_best = log_p_best[p]
+            cur_log_p_second_best = log_p_second_best[p]
+
+            if log_p<cur_log_p_best:
+                log_p_second_best[p] = cur_log_p_best
+                clusters_second_best[p] = clusters[p]
+                log_p_best[p] = log_p
+                clusters[p] = cluster
+            elif log_p<cur_log_p_second_best:
+                log_p_second_best[p] = log_p
+                clusters_second_best[p] = cluster

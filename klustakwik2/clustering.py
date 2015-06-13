@@ -15,7 +15,8 @@ from .distributed import MockDistributer
 
 from .numerics import (accumulate_cluster_mask_sum, compute_cluster_mean,
                        compute_covariance_matrix,
-                       compute_log_p_and_assign, compute_penalties)
+                       compute_log_p_and_assign, compute_penalties,
+                       merge_log_p_arrays)
 
 import time
 
@@ -406,16 +407,19 @@ class KK(object):
                 self.MEC_steps_cluster(cluster, only_evaluate_current_clusters=only_evaluate_current_clusters)
         else:
             # TODO: this is a mock distributed computation, make it really distributed
-            self.old_clusters = self.clusters.copy()
-            distributer = MockDistributer(1)
+            clusters = self.clusters.copy()
+            self.prepare_for_MEC_steps(only_evaluate_current_clusters=only_evaluate_current_clusters)
+            distributer = MockDistributer(2)
             distributer.start(self)
             cluster_order = argsort(num_cluster_members)[::-1] # largest first
-            distributer.iteration(self.clusters, cluster_order, self.full_step, only_evaluate_current_clusters)
-            # temporary hack for only 1 distributed node
-            results = list(distributer.iteration_results())[0]
-            for k, v in results.items():
-                setattr(self, k, v)
-
+            distributer.iteration(clusters, cluster_order, self.full_step, only_evaluate_current_clusters)
+            for results in distributer.iteration_results():
+                merge_log_p_arrays(self.num_spikes,
+                                   self.log_p_best, self.log_p_second_best,
+                                   self.clusters, self.clusters_second_best,
+                                   results['log_p_best'], results['log_p_second_best'],
+                                   results['clusters'], results['clusters_second_best'],
+                                   )
         # No distribution
         # self.prepare_for_MEC_steps(only_evaluate_current_clusters=only_evaluate_current_clusters)
         # for cluster in range(num_clusters):

@@ -3,7 +3,7 @@ from .e_step_cy import *
 import multiprocessing
 from six import itervalues
 
-__all__ = ['compute_log_p_and_assign']
+__all__ = ['compute_log_p_and_assign', 'merge_log_p_arrays']
 
 def compute_log_p_and_assign(kk, cluster, weight, inv_cov_diag, log_root_det, chol, cluster_mean,
                              only_evaluate_current_clusters):
