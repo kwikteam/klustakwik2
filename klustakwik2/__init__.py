@@ -7,6 +7,7 @@ from .scripts.tools import *
 from .monitoring import *
 from .debugtools import *
 from .default_parameters import *
+from .distributed import *
 
 __version__ = '0.2.1'
 __version__ = get_kk_version(__version__)

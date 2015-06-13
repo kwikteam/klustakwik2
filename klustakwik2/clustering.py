@@ -11,6 +11,7 @@ from .logger import log_message
 from .mask_starts import mask_starts
 from .linear_algebra import BlockPlusDiagonalMatrix
 from .default_parameters import default_parameters
+from .distributed import MockDistributer
 
 from .numerics import (accumulate_cluster_mask_sum, compute_cluster_mean,
                        compute_covariance_matrix,
@@ -177,6 +178,11 @@ class KK(object):
                   use_noise_cluster=use_noise_cluster, use_mua_cluster=use_mua_cluster,
                   is_copy=True,
                   **params)
+
+    def copy_without_callbacks(self):
+        kk = self.copy(name='without_callbacks')
+        kk.callbacks = {}
+        return kk
 
     def subset(self, spikes, name='kk_subset', **additional_params):
         newdata = self.data.subset(spikes)
@@ -394,9 +400,26 @@ class KK(object):
         num_clusters = self.num_clusters_alive
         num_cluster_members = self.num_cluster_members
 
-        self.prepare_for_MEC_steps(only_evaluate_current_clusters=only_evaluate_current_clusters)
-        for cluster in range(num_clusters):
-            self.MEC_steps_cluster(cluster, only_evaluate_current_clusters=only_evaluate_current_clusters)
+        if only_evaluate_current_clusters: # no value in distributing this
+            self.prepare_for_MEC_steps(only_evaluate_current_clusters=only_evaluate_current_clusters)
+            for cluster in range(num_clusters):
+                self.MEC_steps_cluster(cluster, only_evaluate_current_clusters=only_evaluate_current_clusters)
+        else:
+            # TODO: this is a mock distributed computation, make it really distributed
+            self.old_clusters = self.clusters.copy()
+            distributer = MockDistributer(1)
+            distributer.start(self)
+            cluster_order = argsort(num_cluster_members)[::-1] # largest first
+            distributer.iteration(self.clusters, cluster_order, self.full_step, only_evaluate_current_clusters)
+            # temporary hack for only 1 distributed node
+            results = list(distributer.iteration_results())[0]
+            for k, v in results.items():
+                setattr(self, k, v)
+
+        # No distribution
+        # self.prepare_for_MEC_steps(only_evaluate_current_clusters=only_evaluate_current_clusters)
+        # for cluster in range(num_clusters):
+        #     self.MEC_steps_cluster(cluster, only_evaluate_current_clusters=only_evaluate_current_clusters)
 
         # we've reassigned clusters so we need to recompute the partitions, but we don't want to
         # reindex yet because we may reassign points to different clusters and we need the original
@@ -436,8 +459,6 @@ class KK(object):
             self.log_p_second_best = inf*ones(num_spikes)
         else:
             self.old_clusters = self.clusters.copy()
-
-        num_skipped = 0
 
         if self.full_step and self.use_noise_cluster and not only_evaluate_current_clusters:
             # start with cluster 0 - uniform distribution over space
