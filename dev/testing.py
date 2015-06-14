@@ -28,8 +28,8 @@ if __name__=='__main__':
     print('Number of spikes:', data.num_spikes)
     print('Number of unique masks:', data.num_masks)
 
-    #distributer = None
-    distributer = MockDistributer(10)
+    distributer = None
+    #distributer = MockDistributer(10)
 
     kk = KK(data, max_iterations=1000,
             use_mua_cluster=False,

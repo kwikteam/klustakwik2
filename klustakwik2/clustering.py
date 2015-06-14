@@ -692,6 +692,12 @@ class KK(object):
         
     @add_slots
     def try_splits(self):
+        # TODO: distribute splitting over multiple machines. It may be sufficient to distribute
+        # split candidate over the machines, and do the evaluation on the same machine. This
+        # greatly reduces the difficulty of programming it, and the amount of intermachine
+        # communication (you only need to send the spikes in the cluster and get back a bool).
+        # In tests on a small data set, split_candidate took about 5x longer than split_evalution,
+        # so it might be the case that you don't lose too much time doing this.
         did_split = False
         num_clusters = self.num_clusters_alive
 
