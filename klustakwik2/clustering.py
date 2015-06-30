@@ -88,10 +88,11 @@ class KK(object):
       defined additional arguments and keyword arguments.
     '''
     def __init__(self, data, callbacks=None, name='',
-                 use_noise_cluster=True, use_mua_cluster=True,
                  is_subset=False, is_copy=False,
                  map_log_to_debug=False,
                  **params):
+        use_noise_cluster = params.pop('use_noise_cluster', True)
+        use_mua_cluster = params.pop('use_mua_cluster', True)
         self.name = name
         if callbacks is None:
             callbacks = {}
@@ -233,8 +234,8 @@ class KK(object):
         self.clusters = kk_sub.clusters
         self.reindex_clusters()
 
-    def cluster_mask_starts(self, num_starting_clusters):
-        clusters = mask_starts(self.data, num_starting_clusters, self.num_special_clusters)
+    def cluster_mask_starts(self):
+        clusters = mask_starts(self.data, self.num_starting_clusters, self.num_special_clusters)
         self.cluster_from(clusters)
 
     def cluster_from(self, clusters, recurse=True, score_target=-inf):

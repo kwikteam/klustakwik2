@@ -91,8 +91,8 @@ def test_synthetic_2d_trivial():
         ((1, 0),   (0.01, 0.01), (1, 0),     (0.0, 0.0)),
         ((0, 1),   (0.01, 0.01), (0, 1),     (0.0, 0.0)),
         ])
-    kk = KK(data, points_for_cluster_mask=1e-100)
-    kk.cluster_mask_starts(10)
+    kk = KK(data, points_for_cluster_mask=1e-100, num_starting_clusters=10)
+    kk.cluster_mask_starts()
     test_approximately_well_clustered(kk.clusters, 2, 100)
 
 
@@ -107,8 +107,8 @@ def test_synthetic_2d_easy():
         ((1, 0), (0.01,)*2, (0.5, 0), (0.01, 0.0)),
         ((0, 1), (0.01,)*2, (0, 0.5), (0.0, 0.01)),
         ])
-    kk = KK(data, points_for_cluster_mask=1e-100)
-    kk.cluster_mask_starts(10)
+    kk = KK(data, points_for_cluster_mask=1e-100, num_starting_clusters=10)
+    kk.cluster_mask_starts()
     test_approximately_well_clustered(kk.clusters, 2, 100)
 
 
@@ -119,8 +119,8 @@ def test_synthetic_4d_easy():
         ((0, 0, 1, 1), (0.1,)*4, (0, 0, 0.5, 1.5), (0, 0, 0.05, 0.05)),
         ((1, 0, 0, 1), (0.1,)*4, (1.5, 0, 0, 1.5), (0.05, 0, 0, 0.05)),
         ])
-    kk = KK(data, points_for_cluster_mask=1e-100)
-    kk.cluster_mask_starts(20)
+    kk = KK(data, points_for_cluster_mask=1e-100, num_starting_clusters=20)
+    kk.cluster_mask_starts()
     test_approximately_well_clustered(kk.clusters, 4, 1000)
 
 
@@ -131,8 +131,8 @@ def test_synthetic_4d_trivial():
         ((0, 0, 1, 1), (0.1,)*4, (0, 0, 0.5, 1.5), (0,)*4),
         ((1, 0, 0, 1), (0.1,)*4, (1.5, 0, 0, 1.5), (0,)*4),
         ])
-    kk = KK(data, points_for_cluster_mask=1e-100)
-    kk.cluster_mask_starts(20)
+    kk = KK(data, points_for_cluster_mask=1e-100, num_starting_clusters=20)
+    kk.cluster_mask_starts()
     test_approximately_well_clustered(kk.clusters, 4, 1000)
 
 
@@ -145,8 +145,8 @@ def test_synthetic_4d_easy_non_gaussian():
         ((1, 0, 0, 1), (0.1,)*4, (1.5, 0, 0, 1.5), (0.05, 0, 0.01, 0.05)),
         ])
     # no space for error, so we set quick steps off
-    kk = KK(data, full_step_every=1, points_for_cluster_mask=1e-100)
-    kk.cluster_mask_starts(20)
+    kk = KK(data, full_step_every=1, points_for_cluster_mask=1e-100, num_starting_clusters=20)
+    kk.cluster_mask_starts()
     test_approximately_well_clustered(kk.clusters, 4, 1000)
 
 

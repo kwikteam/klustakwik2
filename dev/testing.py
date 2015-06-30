@@ -72,7 +72,7 @@ if __name__=='__main__':
     else:
         print('Generating clusters from scratch')
         #kk.cluster_with_subset_schedule(100, [0.99, 1.0])
-        kk.cluster_mask_starts(100)
+        kk.cluster_mask_starts()
 
 #     clusters = loadtxt('../temp/testsmallish.start.clu', skiprows=1, dtype=int)
 # #     dump_covariance_matrices(kk)
