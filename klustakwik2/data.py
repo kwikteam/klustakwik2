@@ -2,8 +2,10 @@ from numpy import *
 import time
 
 from .precomputations import (reduce_masks, compute_correction_terms_and_replace_data,
-                              compute_float_num_unmasked)
+                              compute_float_num_unmasked, reduce_masks_from_arrays,
+                              compute_float_num_unmasked_from_arrays)
 from .logger import log_message
+from six.moves import range
 
 __all__ = ['RawSparseData', 'SparseData',
            ]
@@ -119,3 +121,55 @@ class SparseData(object):
                           self.correction_terms,
                           self.float_num_unmasked[spikes],
                           )
+
+    def subset_features(self, feature_indices):
+        '''
+        Returns a pair data, spikes where spikes are those spikes that are not masked on every channel.
+        '''
+        # do the easy parts
+        noise_mean = self.noise_mean[feature_indices]
+        noise_variance = self.noise_variance[feature_indices]
+        correction_terms = self.correction_terms[feature_indices]
+
+        # inefficient method, loop through all spikes
+        spikes = []
+        features = []
+        masks = []
+        offsets = [0]
+        total_features = 0
+        unmasked = []
+        for p in range(self.num_spikes):
+            U = self.unmasked[self.unmasked_start[p]:self.unmasked_end[p]]
+            U_in = in1d(U, feature_indices)
+            if sum(U_in):
+                F = self.features[self.values_start[p]:self.values_end[p]]
+                M = self.masks[self.values_start[p]:self.values_end[p]]
+                U2, = U_in.nonzero()
+                F2 = F[U2]
+                M2 = M[U2]
+                spikes.append(p)
+                features.append(F2)
+                masks.append(M2)
+                unmasked.append(U2)
+                total_features += len(F2)
+                offsets.append(total_features)
+        features = array(hstack(features), dtype=self.features.dtype)
+        masks = array(hstack(masks), dtype=self.masks.dtype)
+        unmasked = array(hstack(unmasked), dtype=self.unmasked.dtype)
+        spikes = array(spikes, dtype=int)
+        offsets = array(offsets, dtype=int)
+        values_start = offsets[:-1]
+        values_end = offsets[1:]
+
+        unmasked, unmasked_start, unmasked_end = reduce_masks_from_arrays(values_start, values_end, unmasked)
+        float_num_unmasked = compute_float_num_unmasked_from_arrays(masks, offsets)
+
+        data = SparseData(noise_mean, noise_variance,
+                          features, masks,
+                          values_start, values_end,
+                          unmasked, unmasked_start, unmasked_end,
+                          correction_terms,
+                          float_num_unmasked,
+                          )
+
+        return data, spikes
