@@ -203,7 +203,7 @@ class KK(object):
         return KK(newdata, name=self.name+sep+name,
                   callbacks=self.callbacks,
                   is_subset=True,
-                  **params)
+                  **params), spikes
 
     def initialise_clusters(self, clusters):
         self.clusters = clusters
