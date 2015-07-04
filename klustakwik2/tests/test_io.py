@@ -67,7 +67,6 @@ def test_load_fet_fmask():
 
     ### PART 1: Check that loading to RawSparseData is correct
     data, fet, fmask, features, correction_terms = generate_simple_test_raw_data()
-    raw_data = data
 
     nanmasked_fet = fet.copy()
     nanmasked_fet[fmask>0] = nan
@@ -110,6 +109,28 @@ def test_load_fet_fmask():
         assert_array_almost_equal(data_m, true_m)
 
 
+def test_subset_features():
+    raw_data, fet, fmask, features, correction_terms = generate_simple_test_raw_data()
+    data = raw_data.to_sparse_data()
+    for I, sp in [([0], [0]),
+                  ([3, 4], [3]),
+                  ([1, 2], [0, 1, 2]),
+                  ([1, 3, 4], [0, 1, 2, 3]),
+                  ]:
+        I = array(I, dtype=int)
+        subdata, spikes = data.subset_features(I)
+        assert_array_equal(spikes, sp)
+        U = lambda p: subdata.unmasked[subdata.unmasked_start[p]:subdata.unmasked_end[p]]
+        F = lambda p: subdata.features[subdata.values_start[p]:subdata.values_end[p]]
+        M = lambda p: subdata.masks[subdata.values_start[p]:subdata.values_end[p]]
+        CT = lambda p: subdata.correction_terms[subdata.values_start[p]:subdata.values_end[p]]
+        for p in range(len(spikes)):
+            assert_array_equal(U(p), (fmask[spikes[p], I]>0).nonzero()[0])
+            assert_array_equal(F(p), features[spikes[p], I][fmask[spikes[p], I]>0])
+            assert_array_equal(M(p), fmask[spikes[p], I][fmask[spikes[p], I]>0])
+            assert_array_equal(CT(p), correction_terms[spikes[p], I][fmask[spikes[p], I]>0])
+
 if __name__=='__main__':
     test_load_fet_fmask()
+    test_subset_features()
 

@@ -61,10 +61,6 @@ if __name__=='__main__':
 #     kk.register_callback(printclu_before, 'start_EC_steps')
 #     kk.register_callback(printclu_after, 'end_EC_steps')
 
-    kk2, kk2_spikes = kk.subset_features(array([0,1,2,3]))
-    kk2.cluster_mask_starts()
-    exit()
-
     if os.path.exists(fname+'.clu.'+str(shank)+'.flipflop'):
 #     if False:
         shutil.copy(fname+'.clu.'+str(shank)+'.flipflop', fname+'.clu.'+str(shank))
