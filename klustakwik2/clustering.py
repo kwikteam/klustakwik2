@@ -192,6 +192,19 @@ class KK(object):
                   is_subset=True,
                   **params)
 
+    def subset_features(self, feature_indices, name='', **additional_params):
+        newdata, spikes = self.data.subset_features(feature_indices)
+        if self.name:
+            sep = '.'
+        else:
+            sep = ''
+        params = self.params.copy()
+        params.update(**additional_params)
+        return KK(newdata, name=self.name+sep+name,
+                  callbacks=self.callbacks,
+                  is_subset=True,
+                  **params), spikes
+
     def initialise_clusters(self, clusters):
         self.clusters = clusters
         self.old_clusters = -1*ones(len(self.clusters), dtype=int)
