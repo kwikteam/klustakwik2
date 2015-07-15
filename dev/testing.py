@@ -41,6 +41,7 @@ if __name__=='__main__':
 #             fast_split=True,
 #             max_split_iterations=10,
             consider_cluster_deletion=True,
+            #num_cpus=1,
             )
 #     kk.register_callback(SaveCluEvery(fname, shank, every=1))
     kk.register_callback(MonitoringServer())

@@ -29,4 +29,5 @@ default_parameters = dict(
      fast_split=False,
      max_split_iterations=None,
      consider_cluster_deletion=True,
+     num_cpus=None,
      )

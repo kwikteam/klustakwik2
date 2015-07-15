@@ -519,7 +519,7 @@ class KK(object):
                                inv_cov_diag=inv_cov_diag)
                 
             compute_log_p_and_assign(self, cluster, weight, inv_cov_diag, log_root_det, chol,
-                                     cluster_mean, only_evaluate_current_clusters)
+                                     cluster_mean, only_evaluate_current_clusters, self.num_cpus)
             
             self.run_callbacks('e_step_after_main_loop')
 

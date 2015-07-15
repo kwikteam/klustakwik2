@@ -6,7 +6,7 @@ from six import itervalues
 __all__ = ['compute_log_p_and_assign']
 
 def compute_log_p_and_assign(kk, cluster, weight, inv_cov_diag, log_root_det, chol, cluster_mean,
-                             only_evaluate_current_clusters):
+                             only_evaluate_current_clusters, n_cpu=None):
     num_clusters = len(kk.num_cluster_members)
     num_features = kk.num_features
     num_spikes = kk.num_spikes
@@ -33,7 +33,8 @@ def compute_log_p_and_assign(kk, cluster, weight, inv_cov_diag, log_root_det, ch
     old_clusters = kk.old_clusters
     full_step = kk.full_step
 
-    n_cpu = multiprocessing.cpu_count()
+    if n_cpu is None:
+        n_cpu = multiprocessing.cpu_count()
     f2cm_multiple = numpy.zeros(num_features*n_cpu)
     root_multiple = numpy.zeros(num_features*n_cpu)
     cluster_log_p = numpy.zeros(num_spikes)
