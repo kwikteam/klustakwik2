@@ -149,6 +149,17 @@ def test_synthetic_4d_easy_non_gaussian():
     kk.cluster_mask_starts()
     test_approximately_well_clustered(kk.clusters, 4, 1000)
 
+def test_splitting():
+    data = generate_synthetic_data(4, 1000, [
+        ((1, 1, 0, 0), (0.1,)*4, (1.5, 0.5, 0, 0), (0.05, 0.05, 0, 0)),
+        ((0, 1, 1, 0), (0.1,)*4, (0, 0.5, 1.5, 0), (0, 0.05, 0.05, 0)),
+        ((0, 0, 1, 1), (0.1,)*4, (0, 0, 0.5, 1.5), (0, 0, 0.05, 0.05)),
+        ((1, 0, 0, 1), (0.1,)*4, (1.5, 0, 0, 1.5), (0.05, 0, 0, 0.05)),
+        ])
+    kk = KK(data, points_for_cluster_mask=1e-100, num_starting_clusters=20,
+            split_every=1)
+    kk.cluster_mask_starts()
+
 
 if __name__=='__main__':
 #     console_log_level('debug')
@@ -158,3 +169,4 @@ if __name__=='__main__':
         test_synthetic_4d_easy()
         test_synthetic_4d_trivial()
         test_synthetic_4d_easy_non_gaussian()
+        test_splitting()

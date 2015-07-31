@@ -166,9 +166,12 @@ class KK(object):
             use_mua_cluster = self.use_mua_cluster
         params = self.params.copy()
         params.update(**additional_params)
+        if use_noise_cluster is not None:
+            params['use_noise_cluster'] = use_noise_cluster
+        if use_mua_cluster is not None:
+            params['use_mua_cluster'] = use_mua_cluster
         return KK(self.data, name=self.name+sep+name,
                   callbacks=self.callbacks,
-                  use_noise_cluster=use_noise_cluster, use_mua_cluster=use_mua_cluster,
                   is_copy=True,
                   **params)
 
