@@ -91,8 +91,6 @@ class KK(object):
                  is_subset=False, is_copy=False,
                  map_log_to_debug=False,
                  **params):
-        use_noise_cluster = params.pop('use_noise_cluster', True)
-        use_mua_cluster = params.pop('use_mua_cluster', True)
         self.name = name
         if callbacks is None:
             callbacks = {}
@@ -114,13 +112,13 @@ class KK(object):
             setattr(self, k, v)
             if show_params:
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
+        use_noise_cluster = self.use_noise_cluster
+        use_mua_cluster = self.use_mua_cluster
         self.all_params = actual_params
         # Assignment of special clusters
         self.num_special_clusters = 0
         self.first_gaussian_cluster = 0
         self.special_clusters = {}
-        self.use_noise_cluster = use_noise_cluster
-        self.use_mua_cluster = use_mua_cluster
         if use_noise_cluster:
             self.noise_cluster = self.special_clusters['noise'] = self.num_special_clusters
             self.num_special_clusters += 1
