@@ -247,6 +247,20 @@ class KK(object):
         clusters = mask_starts(self.data, self.num_starting_clusters, self.num_special_clusters)
         self.cluster_from(clusters)
 
+    def cluster_random_starts(self):
+        clusters = randint(self.num_special_clusters,
+                           self.num_special_clusters+self.num_starting_clusters,
+                           size=self.data.num_spikes)
+        self.cluster_from(clusters)
+
+    def cluster_mask_or_random_starts(self):
+        if self.data.num_masks<self.num_starting_clusters:
+            self.log('info', 'Using random starts')
+            self.cluster_random_starts()
+        else:
+            self.log('info', 'Using mask starts')
+            self.cluster_mask_starts()
+
     def cluster_from(self, clusters, recurse=True, score_target=-inf):
         self.log('info', 'Clustering data set of %d points, %d features' % (self.data.num_spikes,
                                                                             self.data.num_features))
