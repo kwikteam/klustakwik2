@@ -9,7 +9,7 @@ from .debugtools import *
 from .default_parameters import *
 from .distributed import *
 
-__version__ = '0.2.1'
+__version__ = '0.2.4'
 __version__ = get_kk_version(__version__)
 
 log_message('info', 'KlustaKwik2 version '+__version__)

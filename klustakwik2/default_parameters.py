@@ -12,6 +12,9 @@ default_parameters = dict(
      penalty_k=0.0,
      penalty_k_log_n=1.0,
      max_iterations=1000,
+     num_starting_clusters=500,
+     use_noise_cluster=True,
+     use_mua_cluster=True,
      num_changed_threshold=0.05,
      full_step_every=1,
      split_first=20,
@@ -26,4 +29,5 @@ default_parameters = dict(
      fast_split=False,
      max_split_iterations=None,
      consider_cluster_deletion=True,
+     num_cpus=None,
      )

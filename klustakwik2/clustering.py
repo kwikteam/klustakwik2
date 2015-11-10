@@ -90,7 +90,6 @@ class KK(object):
       defined additional arguments and keyword arguments.
     '''
     def __init__(self, data, callbacks=None, name='',
-                 use_noise_cluster=True, use_mua_cluster=True,
                  is_subset=False, is_copy=False,
                  map_log_to_debug=False,
                  distributer=None,
@@ -116,13 +115,13 @@ class KK(object):
             setattr(self, k, v)
             if show_params:
                 self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
+        use_noise_cluster = self.use_noise_cluster
+        use_mua_cluster = self.use_mua_cluster
         self.all_params = actual_params
         # Assignment of special clusters
         self.num_special_clusters = 0
         self.first_gaussian_cluster = 0
         self.special_clusters = {}
-        self.use_noise_cluster = use_noise_cluster
-        self.use_mua_cluster = use_mua_cluster
         if use_noise_cluster:
             self.noise_cluster = self.special_clusters['noise'] = self.num_special_clusters
             self.num_special_clusters += 1
@@ -134,11 +133,6 @@ class KK(object):
             self.num_special_clusters += 1
         else:
             self.mua_cluster = -2
-
-        if show_params:
-            for k in ['use_noise_cluster', 'use_mua_cluster']:
-                v = getattr(self, k)
-                self.log('info', '%s = %s' % (k, v), suffix='initial_parameters')
 
         self.distributer = distributer
         if distributer is not None:
@@ -179,9 +173,12 @@ class KK(object):
             use_mua_cluster = self.use_mua_cluster
         params = self.params.copy()
         params.update(**additional_params)
+        if use_noise_cluster is not None:
+            params['use_noise_cluster'] = use_noise_cluster
+        if use_mua_cluster is not None:
+            params['use_mua_cluster'] = use_mua_cluster
         return KK(self.data, name=self.name+sep+name,
                   callbacks=self.callbacks,
-                  use_noise_cluster=use_noise_cluster, use_mua_cluster=use_mua_cluster,
                   is_copy=True,
                   **params)
 
@@ -202,6 +199,19 @@ class KK(object):
                   callbacks=self.callbacks,
                   is_subset=True,
                   **params)
+
+    def subset_features(self, feature_indices, name='', **additional_params):
+        newdata, spikes = self.data.subset_features(feature_indices)
+        if self.name:
+            sep = '.'
+        else:
+            sep = ''
+        params = self.params.copy()
+        params.update(**additional_params)
+        return KK(newdata, name=self.name+sep+name,
+                  callbacks=self.callbacks,
+                  is_subset=True,
+                  **params), spikes
 
     def initialise_clusters(self, clusters):
         self.clusters = clusters
@@ -245,8 +255,8 @@ class KK(object):
         self.clusters = kk_sub.clusters
         self.reindex_clusters()
 
-    def cluster_mask_starts(self, num_starting_clusters):
-        clusters = mask_starts(self.data, num_starting_clusters, self.num_special_clusters)
+    def cluster_mask_starts(self):
+        clusters = mask_starts(self.data, self.num_starting_clusters, self.num_special_clusters)
         self.cluster_from(clusters)
 
     def cluster_from(self, clusters, recurse=True, score_target=-inf):
@@ -404,6 +414,7 @@ class KK(object):
         self.reindex_clusters()
 
         num_clusters = self.num_clusters_alive
+        num_features = self.num_features
         num_cluster_members = self.num_cluster_members
 
         if self.distributer is None or only_evaluate_current_clusters: # no value in distributing this
@@ -543,7 +554,7 @@ class KK(object):
                            inv_cov_diag=inv_cov_diag)
 
         compute_log_p_and_assign(self, cluster, weight, inv_cov_diag, log_root_det, chol,
-                                 cluster_mean, only_evaluate_current_clusters)
+                                 cluster_mean, only_evaluate_current_clusters, self.num_cpus)
 
         self.run_callbacks('e_step_after_main_loop')
 

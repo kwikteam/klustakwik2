@@ -21,7 +21,6 @@ def main():
         run_monitoring_server=False,
         save_all_clu=False,
         debug=True,
-        num_starting_clusters=500,
         start_from_clu=None,
         use_noise_cluster=True,
         use_mua_cluster=True,
@@ -71,7 +70,7 @@ def main():
     
     if start_from_clu is None:
         if subset_schedule is None:
-            kk.cluster_mask_starts(num_starting_clusters)
+            kk.cluster_mask_starts()
         else:
             kk.cluster_with_subset_schedule(num_starting_clusters, subset_schedule)
     else:
