@@ -8,31 +8,46 @@ from six.moves import zip
 __all__ = ['load_fet_fmask_to_raw', 'save_clu', 'load_clu', 'SaveCluEvery']
 
 
-def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=0):
+def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=0,
+                          use_fmask=True):
     if use_features is None and drop_last_n_features>0:
         use_features = slice(None, -drop_last_n_features)
     else:
         use_features = slice(None)
     fet_fname = fname+'.fet.'+str(shank)
-    fmask_fname = fname+'.fmask.'+str(shank)
+    if use_fmask:
+        fmask_fname = fname+'.fmask.'+str(shank)
     # read files
     fet_file = open(fet_fname, 'r')
-    fmask_file = open(fmask_fname, 'r')
-    # read first line of fmask file
-    num_features = int(fmask_file.readline())
+    if use_fmask:
+        fmask_file = open(fmask_fname, 'r')
+        # read first line of fmask file
+        fmask_file.readline()
+    num_features = int(fet_file.readline())
     features_to_use = arange(num_features)[use_features]
     num_features = len(features_to_use)
     # Stage 1: read min/max of fet values for normalisation
     # and count total number of unmasked features
-    fet_file.readline() # skip first line (num channels)
+    #fet_file.readline() # skip first line (num channels)
     # we normalise channel-by-channel
     vmin = ones(num_features)*inf
     vmax = ones(num_features)*-inf
     total_unmasked_features = 0
     num_spikes = 0
-    for fetline, fmaskline in zip(fet_file, fmask_file):
+    if use_fmask:
+        lines = zip(fet_file, fmask_file)
+    else:
+        lines = fet_file
+    for line in lines:
+        if use_fmask:
+            fetline, fmaskline = line
+        else:
+            fetline = line
         vals = fromstring(fetline, dtype=float, sep=' ')[use_features]
-        fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')[use_features]
+        if use_fmask:
+            fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')[use_features]
+        else:
+            fmaskvals = ones_like(vals)
         inds, = (fmaskvals>0).nonzero()
         total_unmasked_features += len(inds)
         vmin = minimum(vals, vmin)
@@ -42,9 +57,10 @@ def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=
     fet_file.close()
     fet_file = open(fet_fname, 'r')
     fet_file.readline()
-    fmask_file.close()
-    fmask_file = open(fmask_fname, 'r')
-    fmask_file.readline()
+    if use_fmask:
+        fmask_file.close()
+        fmask_file = open(fmask_fname, 'r')
+        fmask_file.readline()
     vdiff = vmax-vmin
     vdiff[vdiff==0] = 1
     fetsum = zeros(num_features)
@@ -55,9 +71,20 @@ def load_fet_fmask_to_raw(fname, shank, use_features=None, drop_last_n_features=
     all_unmasked = zeros(total_unmasked_features, dtype=int)
     offsets = zeros(num_spikes+1, dtype=int)
     curoff = 0
-    for i, (fetline, fmaskline) in enumerate(zip(fet_file, fmask_file)):
+    if use_fmask:
+        lines = zip(fet_file, fmask_file)
+    else:
+        lines = fet_file
+    for i, line in enumerate(lines):
+        if use_fmask:
+            fetline, fmaskline = line
+        else:
+            fetline = line
         fetvals = (fromstring(fetline, dtype=float, sep=' ')[use_features]-vmin)/vdiff
-        fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')[use_features]
+        if use_fmask:
+            fmaskvals = fromstring(fmaskline, dtype=float, sep=' ')[use_features]
+        else:
+            fmaskvals = ones_like(vals)
         inds, = (fmaskvals>0).nonzero()
         masked_inds, = (fmaskvals==0).nonzero()
         all_features[curoff:curoff+len(inds)] = fetvals[inds]
