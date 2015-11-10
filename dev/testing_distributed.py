@@ -49,6 +49,6 @@ if False:
     kk.cluster_from(clusters)
 else:
     #kk.cluster_with_subset_schedule(100, [0.99, 1.0])
-    kk.cluster_mask_starts(num_starting_masks)
+    kk.cluster_mask_starts()
 
 save_clu(kk, fname, shank)
