@@ -11,7 +11,7 @@ Install Python using the `Anaconda distribution <http://continuum.io/downloads>`
 need to install the packages numpy, scipy, cython and nose. For Windows, Python 2.7 might be a better option than
 3.x.
 
-On all platforms, KlustaKwik can be installed using ``pip install klustakwik2``. The default installation options
+On all platforms, KlustaKwik can be installed using ``pip install klustakwik2`` (from source) or ``conda install -c kwikteam klustakwik2`` (precompiled binary). The default installation options
 are as follows:
 
 * **Linux**: Multithreading on by default.
@@ -50,8 +50,10 @@ To force multithreading to be off:
 Windows
 ~~~~~~~
 
-In the future we will provide a binary distribution that won't require compilation, however for the moment the
-following, slightly more complicated than ideal installation steps are required.
+Install a precompiled Windows binary with Anaconda in an anaconda package:
+    conda install -c kwikteam klustakwik2
+
+If you wish to compile from source, the instructions are a bit more complicated:
 
 Using Python 2.7, you will need a copy of MS Visual Studio Express 2008 for Python, available for free
 download `here <http://www.microsoft.com/en-us/download/details.aspx?id=44266>`_. Python 3.x might require a different
