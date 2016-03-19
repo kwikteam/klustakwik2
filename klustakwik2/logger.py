@@ -6,6 +6,7 @@ to refactor it into the logging solution of phy later on.
 '''
 
 import logging
+import os.path as op
 
 __all__ = ['logger', 'log_to_file', 'file_log_level', 'console_log_level', 'log_message',
            'log_suppress_hierarchy', 'log_suppress_name', 'log_remove_filters',
@@ -31,16 +32,28 @@ def log_to_file(fname, level=logging.INFO):
     FILE_HANDLER.setLevel(level)
     FILE_HANDLER.setFormatter(logging.Formatter('%(asctime)s %(levelname)-8s %(name)s: %(message)s'))
     logger.addHandler(FILE_HANDLER)
-    
+
 def file_log_level(level):
     if isinstance(level, str):
         level = LOG_LEVELS[level.upper()]
     FILE_HANDLER.setLevel(level)
 
+class _Formatter(logging.Formatter):
+    def format(self, record):
+        # Only keep the first character in the level name.
+        record.levelname = record.levelname[0]
+        filename = op.splitext(op.basename(record.pathname))[0]
+        record.caller = '{:s}:{:d}'.format(filename, record.lineno).ljust(20)
+        return super(_Formatter, self).format(record)
+
 # create console handler with a higher log level
 CONSOLE_HANDLER = logging.StreamHandler()
 CONSOLE_HANDLER.setLevel(logging.INFO)
-CONSOLE_HANDLER.setFormatter(logging.Formatter('%(levelname)-8s %(name)s: %(message)s'))
+_logger_fmt = '%(asctime)s [%(levelname)s] %(name)s %(message)s'
+_logger_date_fmt = '%H:%M:%S'
+
+CONSOLE_HANDLER.setFormatter(_Formatter(_logger_fmt,
+                                        datefmt=_logger_date_fmt))
 logger.addHandler(CONSOLE_HANDLER)
 
 def console_log_level(level):
@@ -51,7 +64,7 @@ def console_log_level(level):
 def log_message(level, msg, name=None):
     '''
     Adds a log message at the specified log level.
-    
+
     Log levels (strings) can be one of (In descending order of severity): critical, error, warning,
     info, debug.
     '''
@@ -87,16 +100,16 @@ class HierarchyFilter(object):
 class NameFilter(object):
     '''
     A class for suppressing log messages ending with a certain name.
-    
+
     Parameters
     ----------
     name : str
         The name to suppress. See `BrianLogger.suppress_name` for details.
     '''
-    
+
     def __init__(self, name):
         self.name = name
-    
+
     def filter(self, record):
         '''
         Filter out all messages ending with a certain name.
