@@ -3,6 +3,8 @@ klustakwik2
 
 .. image:: https://travis-ci.org/kwikteam/klustakwik2.svg?branch=master
     :target: https://travis-ci.org/kwikteam/klustakwik2
+    
+**NOTE: please follow the instructions for the klusta package https://github.com/kwikteam/klusta : the instructions below should not be used.**
 
 Installation instructions
 =========================
