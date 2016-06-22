@@ -25,6 +25,7 @@ def main():
         use_noise_cluster=True,
         use_mua_cluster=True,
         subset_schedule=None,
+        use_fmask=True,
         )
     (fname, shank), params = parse_args(2, script_params, __doc__.strip()+'\n',
                                         string_args=set(['start_from_clu']))
@@ -39,6 +40,7 @@ def main():
     use_noise_cluster = params.pop('use_noise_cluster')
     use_mua_cluster = params.pop('use_mua_cluster')
     subset_schedule = params.pop('subset_schedule')
+    use_fmask = params.pop('use_fmask')
     
     if subset_schedule is not None:
         if save_clu_every is not None:
@@ -54,7 +56,8 @@ def main():
     log_suppress_hierarchy('klustakwik', inclusive=False)
 
     start_time = time.time()
-    raw_data = load_fet_fmask_to_raw(fname, shank, drop_last_n_features=drop_last_n_features)
+    raw_data = load_fet_fmask_to_raw(fname, shank, drop_last_n_features=drop_last_n_features,
+                                     use_fmask=use_fmask)
     log_message('debug', 'Loading data from .fet and .fmask file took %.2f s' % (time.time()-start_time))
     data = raw_data.to_sparse_data()
     
@@ -70,7 +73,7 @@ def main():
     
     if start_from_clu is None:
         if subset_schedule is None:
-            kk.cluster_mask_starts()
+            kk.cluster_mask_or_random_starts()
         else:
             kk.cluster_with_subset_schedule(num_starting_clusters, subset_schedule)
     else:

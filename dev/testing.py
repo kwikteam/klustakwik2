@@ -13,14 +13,16 @@ if __name__=='__main__':
     log_to_file(fname+'.klg.'+str(shank), 'debug')
     #log_suppress_hierarchy('klustakwik', inclusive=False)
 
-    if os.path.exists(fname+'.pickle'):
-#     if False:
+    # if os.path.exists(fname+'.pickle'):
+    if False:
         start_time = time.time()
         data = pickle.load(open(fname+'.pickle', 'rb'))
         print('load from pickle:', time.time()-start_time)
     else:
         start_time = time.time()
-        raw_data = load_fet_fmask_to_raw(fname, shank, drop_last_n_features=1)
+        raw_data = load_fet_fmask_to_raw(fname, shank, drop_last_n_features=1,
+                                         use_fmask=False,
+                                         )
         print('load_fet_fmask_to_raw:', time.time()-start_time)
         data = raw_data.to_sparse_data()
         pickle.dump(data, open(fname+'.pickle', 'wb'), -1)
@@ -41,7 +43,8 @@ if __name__=='__main__':
 #             fast_split=True,
 #             max_split_iterations=10,
             consider_cluster_deletion=True,
-            #num_cpus=1,
+            num_cpus=1,
+            num_starting_clusters=50,
             )
 #     kk.register_callback(SaveCluEvery(fname, shank, every=1))
     kk.register_callback(MonitoringServer())
@@ -73,7 +76,7 @@ if __name__=='__main__':
     else:
         print('Generating clusters from scratch')
         #kk.cluster_with_subset_schedule(100, [0.99, 1.0])
-        kk.cluster_mask_starts()
+        kk.cluster_mask_or_random_starts()
 
 #     clusters = loadtxt('../temp/testsmallish.start.clu', skiprows=1, dtype=int)
 # #     dump_covariance_matrices(kk)
