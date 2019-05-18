@@ -15,9 +15,9 @@ def get_kk_version(version):
     filedir, _ = os.path.split(__file__)
     os.chdir(filedir)
     try:
-        fnull = open(os.devnull, 'w')
-        version = 'git-'+subprocess.check_output(['git', 'describe', '--abbrev=8', '--dirty',
-                                                       '--always', '--tags'], stderr=fnull).strip().decode('ascii')
+        with open(os.devnull, 'w') as fnull:
+            version = 'git-'+subprocess.check_output(['git', 'describe', '--abbrev=8', '--dirty',
+                                                        '--always', '--tags'], stderr=fnull).strip().decode('ascii')
     except:
         pass
     os.chdir(curdir)
